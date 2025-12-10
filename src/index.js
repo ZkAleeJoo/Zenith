@@ -10,7 +10,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.commands = new Collection();
 
 // --- CARGADOR DE COMANDOS ---
-const foldersPath = path.join(__dirname, 'commands'); //HOLA ESTE ES UN CAMBIO
+const foldersPath = path.join(__dirname, 'commands'); 
 const commandFolders = fs.readdirSync(foldersPath);
 
 for (const folder of commandFolders) {
