@@ -45,7 +45,7 @@ for (const file of eventFiles) {
 const app = express();
 app.use(cors());
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.get('/api/stats', (req, res) => {
     res.json({
