@@ -244,12 +244,12 @@ module.exports = {
 
         collector.on('collect', async i => {
             if (i.user.id !== p2.id) {
-                return i.reply({ content: '🚫 Tú no eres el retador.', flags: 64 });
+                return i.reply({ content: '<a:no:1442565248115806278> \`|\` Tú no eres el retador.', flags: 64 });
             }
 
             if (i.customId === 'deny_duel') {
                 collector.stop();
-                await i.update({ content: '🏳️ **El oponente ha rechazado el combate.**', embeds: [], components: [], files: [] });
+                await i.update({ content: '<a:no:1442565248115806278> \`|\` **El oponente ha rechazado el combate**', embeds: [], components: [], files: [] });
                 return;
             }
 
