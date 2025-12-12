@@ -225,11 +225,6 @@ module.exports = {
         const vsAttachment = new AttachmentBuilder(vsBuffer, { name: 'versus.png' });
 
         const inviteEmbed = new EmbedBuilder()
-            .setTitle('ARENA DE COMBATE')
-            .setDescription(`
-                > **${p1.username}** - **${p2.username}**\n
-                \n
-                > \`¿Aceptas el desafío por el honor y la gloria?\``)
             .setColor(0xFF0000)
             .setImage('attachment://versus.png')
 
@@ -249,7 +244,7 @@ module.exports = {
 
         collector.on('collect', async i => {
             if (i.user.id !== p2.id) {
-                return i.reply({ content: '🚫 Tú no eres el retador.', ephemeral: true });
+                return i.reply({ content: '🚫 Tú no eres el retador.', flags: 64 });
             }
 
             if (i.customId === 'deny_duel') {
@@ -305,7 +300,7 @@ async function startSelectionPhase(interaction, p1, p2, p1Data, p2Data) {
 
     selector.on('collect', async i => {
         const uid = i.user.id;
-        if (!state[uid]) return i.reply({ content: 'Silencio en la grada.', ephemeral: true });
+        if (!state[uid]) return i.reply({ content: 'Silencio en la grada.', flags: 64 });
 
         if (i.customId.includes('prev') || i.customId.includes('next')) {
             const action = i.customId.split('_')[0]; 
@@ -323,7 +318,7 @@ async function startSelectionPhase(interaction, p1, p2, p1Data, p2Data) {
             await i.deferUpdate(); 
             const stats = await getBattleStats(card.id, card.isShiny);
             
-            if (!stats) return i.followUp({ content: 'Error de conexión con la base de datos Pokémon.', ephemeral: true });
+            if (!stats) return i.followUp({ content: 'Error de conexión con la base de datos Pokémon.', flags: 64 });
 
             state[uid].selected = { card, stats, user: i.user };
 
