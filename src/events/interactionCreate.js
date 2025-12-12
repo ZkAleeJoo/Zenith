@@ -20,9 +20,9 @@ module.exports = {
             console.error(error);
 
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp({ content: '❌ Hubo un error ejecutando este comando.', ephemeral: true }).catch(() => {});
+                await interaction.followUp({ content: '❌ Hubo un error ejecutando este comando.', flags: 64 }).catch(() => {});
             } else {
-                await interaction.reply({ content: '❌ Hubo un error ejecutando este comando.', ephemeral: true }).catch(() => {});
+                await interaction.reply({ content: '❌ Hubo un error ejecutando este comando.', flags: 64 }).catch(() => {});
             }
         }
         }
@@ -55,7 +55,7 @@ module.exports = {
                     });
 
                 } catch (error) {
-                    await interaction.reply({ content: '❌ Error: No pude enviar DM al usuario (bloqueado). Pásale el código manual: ' + code, ephemeral: true });
+                    await interaction.reply({ content: '❌ Error: No pude enviar DM al usuario (bloqueado). Pásale el código manual: ' + code, flags: 64 });
                 }
             }
 
