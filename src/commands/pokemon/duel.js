@@ -2,19 +2,11 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const { getUserData, addCoins } = require('../../utils/dataHandler');
 const { createBattleVersus } = require('../../utils/canvasGenerator');
 const { EMOJIS, TYPE_COLORS } = require('../../utils/constants');
-const Canvas = require('canvas');
-const path = require('path');
-
-try {
-    Canvas.registerFont(path.join(__dirname, '../../assets/fonts/PressStart2P-Regular.ttf'), { family: 'PressStart2P' });
-} catch (error) {
-    console.log('Advertencia: No se pudo cargar la fuente PressStart2P. Usando fuente predeterminada.');
-}
 
 const statsCache = new Map();
 
-function drawTextHealthBar(current, max) {
-    const totalBars = 10; 
+function drawHealthBar(current, max) {
+    const totalBars = 15; 
     const percentage = Math.max(0, Math.min(1, current / max));
     const filled = Math.round(percentage * totalBars);
     const empty = totalBars - filled;
@@ -23,88 +15,6 @@ function drawTextHealthBar(current, max) {
     const emptyChar = '⬛'; 
     
     return `${fillChar.repeat(filled)}${emptyChar.repeat(empty)}`;
-}
-
-async function generateBattleImage(f1, f2) {
-    const width = 800;
-    const height = 400;
-    const canvas = Canvas.createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
-
-    const gradient = ctx.createRadialGradient(width / 2, height / 2, 50, width / 2, height / 2, 400);
-    gradient.addColorStop(0, '#2b323c');
-    gradient.addColorStop(1, '#1a1d23');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
-
-    // 
-    ctx.fillStyle = '#141619';
-    ctx.fillRect(0, 300, width, 100);
-    ctx.strokeStyle = '#3e4652';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(0, 300);
-    ctx.lineTo(width, 300);
-    ctx.stroke();
-
-    ctx.save();
-    ctx.font = '50px "PressStart2P"';
-    ctx.fillStyle = '#ff4757';
-    ctx.shadowColor = '#ff6b81';
-    ctx.shadowBlur = 15;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    const text = (f1.stats.hp === 0 || f2.stats.hp === 0) ? 'FINISH' : 'VS';
-    ctx.fillText(text, width / 2, height / 2 - 40);
-    ctx.restore();
-
-    try {
-        const img1 = await Canvas.loadImage(f1.stats.sprite);
-        const img2 = await Canvas.loadImage(f2.stats.sprite);
-
-        ctx.drawImage(img1, 100, 180, 200, 200);
-        ctx.drawImage(img2, 500, 180, 200, 200);
-    } catch (e) {
-        console.error('Error cargando sprites:', e);
-    }
-
-    const drawBar = (x, y, current, max, name) => {
-        const barW = 220;
-        const barH = 24;
-        const pct = Math.max(0, current / max);
-
-        ctx.fillStyle = '#fff';
-        ctx.font = '14px "PressStart2P"';
-        ctx.shadowColor = '#000';
-        ctx.shadowBlur = 4;
-        ctx.fillText(name.slice(0, 15), x, y - 10);
-        ctx.shadowBlur = 0;
-
-        ctx.fillStyle = '#2f3640';
-        ctx.fillRect(x, y, barW, barH);
-        
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, barW, barH);
-
-        
-        let color = '#2ecc71'; 
-        if (pct < 0.5) color = '#f1c40f'; 
-        if (pct < 0.2) color = '#e74c3c'; 
-        
-        ctx.fillStyle = color;
-        ctx.fillRect(x + 2, y + 2, (barW - 4) * pct, barH - 4);
-
-        ctx.font = '10px "PressStart2P"';
-        ctx.fillStyle = '#fff';
-        ctx.fillText(`${current}/${max}`, x + barW - 5, y - 35); 
-    };
-
-    drawBar(50, 60, f1.stats.hp, f1.stats.max_hp, f1.stats.name);
-    drawBar(530, 340, f2.stats.hp, f2.stats.max_hp, f2.stats.name);
-
-    return canvas.toBuffer();
 }
 
 async function getBattleStats(pokemonId, isShiny) {
@@ -121,8 +31,8 @@ async function getBattleStats(pokemonId, isShiny) {
             atk: data.stats[1].base_stat,
             def: data.stats[2].base_stat,
             spd: data.stats[5].base_stat,
-            sprite: data.sprites.other['home'].front_default || data.sprites.front_default, 
-            shiny_sprite: data.sprites.other['home'].front_shiny || data.sprites.front_shiny
+            sprite: data.sprites.other['home'].front_default, 
+            shiny_sprite: data.sprites.other['home'].front_shiny
         };
 
         statsCache.set(pokemonId, stats);
@@ -341,24 +251,33 @@ async function runBattle(interaction, f1, f2) {
     }
 
     let winner = f1.stats.hp > 0 ? f1 : f2;
-    
-    addCoins(winner.user.id, 150);
+    let loser = f1.stats.hp > 0 ? f2 : f1;
+    if (f1.stats.hp === 0 && f2.stats.hp === 0) winner = f1;
 
-    const resultBuffer = await generateBattleImage(f1, f2);
-    const resultAttachment = new AttachmentBuilder(resultBuffer, { name: 'battle-result.png' });
+    addCoins(winner.user.id, 150);
 
     const embed = new EmbedBuilder()
         .setTitle(`🏆 ¡VICTORIA PARA ${winner.user.username.toUpperCase()}!`)
         .setDescription(`**${winner.stats.name}** se alza con la victoria tras ${turn} rondas de combate intenso.\n\n💰 **Recompensa:** +150 ${EMOJIS.money}`)
         .setColor(TYPE_COLORS.legendary || 0xFFD700)
-        .setImage('attachment://battle-result.png') 
+        .setThumbnail(winner.stats.sprite)
         .addFields(
+            { 
+                name: `🔴 ${f1.user.username} | ${f1.stats.name}`, 
+                value: `${drawHealthBar(f1.stats.hp, f1.stats.max_hp)}\n❤️ ${f1.stats.hp}/${f1.stats.max_hp}`, 
+                inline: true 
+            },
+            { 
+                name: `🔵 ${f2.user.username} | ${f2.stats.name}`, 
+                value: `${drawHealthBar(f2.stats.hp, f2.stats.max_hp)}\n❤️ ${f2.stats.hp}/${f2.stats.max_hp}`, 
+                inline: true 
+            },
             {
                 name: '📜 Resumen de Batalla',
-                value: `\`\`\`\n${log.slice(-6).join('\n')}\n\`\`\``, 
+                value: `${log.slice(-6).join('\n')}`, 
                 inline: false
             }
         );
 
-    await interaction.editReply({ content: null, embeds: [embed], components: [], files: [resultAttachment] });
+    await interaction.editReply({ content: null, embeds: [embed], components: [], files: [] });
 }
