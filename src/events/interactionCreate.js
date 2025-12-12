@@ -16,11 +16,15 @@ module.exports = {
             try {
                 await command.execute(interaction);
             } catch (error) {
-                console.error(error);
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({ content: 'Hubo un error ejecutando este comando', ephemeral: true });
-                }
+            console.error(`Error ejecutando ${interaction.commandName}`);
+            console.error(error);
+
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({ content: '❌ Hubo un error ejecutando este comando.', ephemeral: true }).catch(() => {});
+            } else {
+                await interaction.reply({ content: '❌ Hubo un error ejecutando este comando.', ephemeral: true }).catch(() => {});
             }
+        }
         }
 
         // --- MANEJO DE BOTONES DE PAGO ---
