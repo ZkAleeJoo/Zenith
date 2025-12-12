@@ -13,7 +13,9 @@ module.exports = {
                 .setRequired(false)),
 
     async execute(interaction) {
-        await interaction.deferReply();
+        if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferReply();
+        }
 
         const targetUser = interaction.options.getUser('user') || interaction.user;
         const userData = getUserData(targetUser.id);
@@ -34,10 +36,10 @@ module.exports = {
         const generateMessagePayload = async (page) => {
             const start = page * ITEMS_PER_PAGE;
             const end = start + ITEMS_PER_PAGE;
-            const currentCards = cards.slice(start, end); 
+            const currentCards = cards.slice(start, end);
 
             const buffer = await createCollectionCard(targetUser, currentCards, page + 1, totalPages);
-            const attachment = new AttachmentBuilder(buffer, { name: `album-page-${page}.png` });
+            const attachment = new AttachmentBuilder(buffer, { name: 'album.png' });
 
             const row = new ActionRowBuilder()
                 .addComponents(
