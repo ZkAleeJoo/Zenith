@@ -200,7 +200,7 @@ function applyShinyBonus(base, isShiny) {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('duel')
-        .setDescription('⚔️ Sistema de Batalla Profesional (PvP)')
+        .setDescription('Sistema de Batalla Profesional (PvP)')
         .addUserOption(option => 
             option.setName('oponente')
                 .setDescription('Entrenador a desafiar')
@@ -212,8 +212,8 @@ module.exports = {
         const p1 = interaction.user;
         const p2 = interaction.options.getUser('oponente');
 
-        if (p2.id === p1.id) return interaction.editReply('🛑 **Error:** No puedes pelear contra ti mismo.');
-        if (p2.bot) return interaction.editReply('🤖 **Error:** Los bots son pacifistas (por ahora).');
+        if (p2.id === p1.id) return interaction.editReply('<a:no:1442565248115806278> **Error:** No puedes pelear contra ti mismo');
+        if (p2.bot) return interaction.editReply('<a:no:1442565248115806278> **Error:** Los bots son pacifistas (por ahora)');
 
         const p1Data = getUserData(p1.id);
         const p2Data = getUserData(p2.id);
@@ -225,19 +225,21 @@ module.exports = {
         const vsAttachment = new AttachmentBuilder(vsBuffer, { name: 'versus.png' });
 
         const inviteEmbed = new EmbedBuilder()
-            .setTitle('🏟️ ARENA DE COMBATE')
-            .setDescription(`# ${p1.username} 🆚 ${p2.username}\n\nSe ha lanzado un guante blanco.\n¿Aceptas el desafío por el honor y la gloria?`)
+            .setTitle('ARENA DE COMBATE')
+            .setDescription(`
+                > **${p1.username}** - **${p2.username}**\n
+                \n
+                > \`¿Aceptas el desafío por el honor y la gloria?\``)
             .setColor(0xFF0000)
             .setImage('attachment://versus.png')
-            .setFooter({ text: 'Zenith Battle System v3.0' });
 
         const inviteRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('accept_duel').setLabel('ACEPTAR DUELO').setStyle(ButtonStyle.Success).setEmoji('⚔️'),
+            new ButtonBuilder().setCustomId('accept_duel').setLabel('ACEPTAR DUELO').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId('deny_duel').setLabel('HUIR').setStyle(ButtonStyle.Danger)
         );
 
         const msg = await interaction.editReply({ 
-            content: `🔔 <@${p2.id}> has sido desafiado!`, 
+            content: `> \`|\` <@${p2.id}> **te desafiarón a una batalla**`, 
             embeds: [inviteEmbed], 
             components: [inviteRow], 
             files: [vsAttachment] 
@@ -272,8 +274,10 @@ async function startSelectionPhase(interaction, p1, p2, p1Data, p2Data) {
     const getPayload = () => {
         const rows = [];
         const embed = new EmbedBuilder()
-            .setTitle('🎴 FASE DE SELECCIÓN TÁCTICA')
-            .setDescription('Elige a tu campeón sabiamente.')
+            .setTitle('FASE DE SELECCIÓN')
+            .setDescription('Elige a tu Pokemon para la batalla. Tienen 2 minutos para seleccionar.\n\n' +
+                            '🔴 **Rojo:** Jugador 1\n' +
+                            '🔵 **Azul:** Jugador 2')
             .setColor('#2B2D31')
             .setFooter({ text: 'Los Shinys tienen +20% HP y +10% ATK' });
 
@@ -301,7 +305,7 @@ async function startSelectionPhase(interaction, p1, p2, p1Data, p2Data) {
 
     selector.on('collect', async i => {
         const uid = i.user.id;
-        if (!state[uid]) return i.reply({ content: '🤫 Silencio en la grada.', ephemeral: true });
+        if (!state[uid]) return i.reply({ content: 'Silencio en la grada.', ephemeral: true });
 
         if (i.customId.includes('prev') || i.customId.includes('next')) {
             const action = i.customId.split('_')[0]; 
@@ -400,8 +404,8 @@ async function runBattle(interaction, f1, f2) {
     const embed = new EmbedBuilder()
         .setTitle(`🏆 ¡VICTORIA PARA ${winner.user.username.toUpperCase()}!`)
         .setDescription(`**${winner.stats.name}** se alza con la victoria tras **${turn-1} rondas** de combate.\n\n` + 
-                        `🏅 **Ganador:** ${winner.user} (+${prize} ${EMOJIS.money})\n` +
-                        `💀 **Perdedor:** ${loser.user}`)
+                        `> \`|\` **Ganador:** ${winner.user} (+${prize} ${EMOJIS.money})\n` +
+                        `> \`|\` **Perdedor:** ${loser.user}`)
         .setColor(TYPE_COLORS.legendary || 0xFFD700)
         .setImage('attachment://battle-result.png') 
         .setFooter({ text: 'Combate finalizado • Zenith Battle System' });
