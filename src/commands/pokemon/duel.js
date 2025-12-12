@@ -28,7 +28,6 @@ async function generateBattleImage(f1, f2) {
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
-
     ctx.fillStyle = '#111';
     ctx.beginPath();
     ctx.ellipse(width / 2, 420, 380, 60, 0, 0, Math.PI * 2);
@@ -57,15 +56,15 @@ async function generateBattleImage(f1, f2) {
         ctx.ellipse(200, 430, 80, 20, 0, 0, Math.PI * 2); 
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(600, 430, 80, 20, 0, 0, Math.PI * 2);  
+        ctx.ellipse(600, 430, 80, 20, 0, 0, Math.PI * 2); 
         ctx.fill();
 
         const size = 250;
         ctx.drawImage(img1, 75, 440 - size, size, size);
 
         ctx.save();
-        ctx.translate(600 + (size/2), 440 - size);
-        ctx.scale(-1, 1);
+        ctx.translate(600 + (size/2), 440 - size); 
+        ctx.scale(-1, 1); 
         ctx.drawImage(img2, 0, 0, size, size); 
         ctx.restore();
 
@@ -102,7 +101,6 @@ async function generateBattleImage(f1, f2) {
             grad.addColorStop(1, shadeColor(hpColor, -40));
             
             ctx.fillStyle = grad;
-
             if (alignRight) {
                  roundRect(ctx, x + (barW * (1 - hpPercent)), y, barW * hpPercent, barH, 10, true, false);
             } else {
@@ -214,7 +212,7 @@ module.exports = {
         const p1 = interaction.user;
         const p2 = interaction.options.getUser('oponente');
 
-        if (p2.id === p1.id) return interaction.editReply('🛑 **Error:** No puedes pelear contra ti mismo (esquizofrenia no incluida).');
+        if (p2.id === p1.id) return interaction.editReply('🛑 **Error:** No puedes pelear contra ti mismo.');
         if (p2.bot) return interaction.editReply('🤖 **Error:** Los bots son pacifistas (por ahora).');
 
         const p1Data = getUserData(p1.id);
@@ -249,12 +247,12 @@ module.exports = {
 
         collector.on('collect', async i => {
             if (i.user.id !== p2.id) {
-                return i.reply({ content: '🚫 Tú no eres el retador, siéntate y mira.', ephemeral: true });
+                return i.reply({ content: '🚫 Tú no eres el retador.', ephemeral: true });
             }
 
             if (i.customId === 'deny_duel') {
                 collector.stop();
-                await i.update({ content: '🏳️ **El oponente ha huido del combate.**', embeds: [], components: [], files: [] });
+                await i.update({ content: '🏳️ **El oponente ha rechazado el combate.**', embeds: [], components: [], files: [] });
                 return;
             }
 
@@ -371,7 +369,6 @@ async function runBattle(interaction, f1, f2) {
     let attacker = f1.stats.spd >= f2.stats.spd ? f1 : f2;
     let defender = f1.stats.spd >= f2.stats.spd ? f2 : f1;
 
-    let log = [];
     let turn = 1;
     const maxTurns = 20;
 
@@ -386,11 +383,6 @@ async function runBattle(interaction, f1, f2) {
 
         defender.stats.hp -= damage;
         if (defender.stats.hp < 0) defender.stats.hp = 0;
-
-        const icon = attacker.user.id === f1.user.id ? '🔴' : '🔵';
-        const critMsg = isCrit ? ' **¡CRÍTICO!** 💥' : '';
-        
-        log.push(`${icon} **${attacker.stats.name}** atacó: -${damage} HP${critMsg}`);
 
         [attacker, defender] = [defender, attacker];
         turn++;
@@ -407,18 +399,12 @@ async function runBattle(interaction, f1, f2) {
 
     const embed = new EmbedBuilder()
         .setTitle(`🏆 ¡VICTORIA PARA ${winner.user.username.toUpperCase()}!`)
-        .setDescription(`Tras ${turn-1} rondas, **${winner.stats.name}** demostró su superioridad.\n\n` + 
+        .setDescription(`**${winner.stats.name}** se alza con la victoria tras **${turn-1} rondas** de combate.\n\n` + 
                         `🏅 **Ganador:** ${winner.user} (+${prize} ${EMOJIS.money})\n` +
                         `💀 **Perdedor:** ${loser.user}`)
         .setColor(TYPE_COLORS.legendary || 0xFFD700)
         .setImage('attachment://battle-result.png') 
-        .addFields(
-            {
-                name: '📜 Log de Batalla (Últimos movimientos)',
-                value: log.slice(-8).join('\n') || 'Batalla instantánea.', 
-                inline: false
-            }
-        );
+        .setFooter({ text: 'Combate finalizado • Zenith Battle System' });
 
     await interaction.editReply({ content: null, embeds: [embed], components: [], files: [resultAttachment] });
 }
