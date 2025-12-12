@@ -418,6 +418,75 @@ module.exports = {
 
 
         return canvas.toBuffer();
+    },
+
+    createBattleVersus: async (user1, user2) => {
+        const width = 800;
+        const height = 300;
+        const canvas = Canvas.createCanvas(width, height);
+        const ctx = canvas.getContext('2d');
+
+
+        const grad1 = ctx.createLinearGradient(0, 0, width/2, height);
+        grad1.addColorStop(0, '#8B0000'); 
+        grad1.addColorStop(1, '#2c0000');
+        ctx.fillStyle = grad1;
+        ctx.fillRect(0, 0, width/2 + 50, height); 
+
+        const grad2 = ctx.createLinearGradient(width/2, 0, width, height);
+        grad2.addColorStop(0, '#00008B'); 
+        grad2.addColorStop(1, '#00002c');
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(width/2 - 50, 0); 
+        ctx.lineTo(width, 0);
+        ctx.lineTo(width, height);
+        ctx.lineTo(width/2 + 50, height);
+        ctx.closePath();
+        ctx.fillStyle = grad2;
+        ctx.fill();
+        ctx.restore();
+
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.moveTo(width/2 - 50, -10);
+        ctx.lineTo(width/2 + 50, height + 10);
+        ctx.stroke();
+
+        const drawAvatar = async (user, x, align) => {
+            try {
+                const avatarURL = user.displayAvatarURL({ extension: 'png', size: 256 });
+                const img = await Canvas.loadImage(avatarURL);
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(x, 150, 80, 0, Math.PI * 2);
+                ctx.lineWidth = 8;
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.stroke();
+                ctx.clip();
+                ctx.drawImage(img, x - 80, 70, 160, 160);
+                ctx.restore();
+            } catch (e) {}
+        };
+
+        await drawAvatar(user1, 150);
+        await drawAvatar(user2, 650);
+
+        ctx.shadowColor = "rgba(0,0,0,0.8)";
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = '#FFD700'; 
+        ctx.font = `italic 80px sans-serif`;
+        try { ctx.font = `80px '${fontFamily}'`; } catch(e){} 
+        ctx.textAlign = 'center';
+        ctx.fillText('VS', width/2, 175);
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `20px '${fontFamily}'`;
+        ctx.fillText(user1.username.toUpperCase(), 150, 260);
+        ctx.fillText(user2.username.toUpperCase(), 650, 260);
+
+        return canvas.toBuffer();
     }
 };
 
