@@ -225,7 +225,7 @@ module.exports = {
         const vsAttachment = new AttachmentBuilder(vsBuffer, { name: 'versus.png' });
 
         const inviteEmbed = new EmbedBuilder()
-            .setColor(0xFF0000)
+            .setColor('#ff0000')
             .setImage('attachment://versus.png')
 
         const inviteRow = new ActionRowBuilder().addComponents(
@@ -269,11 +269,9 @@ async function startSelectionPhase(interaction, p1, p2, p1Data, p2Data) {
     const getPayload = () => {
         const rows = [];
         const embed = new EmbedBuilder()
-            .setTitle('FASE DE SELECCIÓN')
-            .setDescription('Elige a tu Pokemon para la batalla. Tienen 2 minutos para seleccionar.\n\n' +
-                            '🔴 **Rojo:** Jugador 1\n' +
-                            '🔵 **Azul:** Jugador 2')
-            .setColor('#2B2D31')
+            .setThumbnail("https://www.pokexperto.net/pokemongo/insignias/Badge_13_3_01.png")
+            .setDescription("> `|` **Selecciona una carta para el combate:**")
+            .setColor('#ff0000')
             .setFooter({ text: 'Los Shinys tienen +20% HP y +10% ATK' });
 
         if (!state[p1.id].selected) {
@@ -281,7 +279,7 @@ async function startSelectionPhase(interaction, p1, p2, p1Data, p2Data) {
             rows.push(createPageButtons(p1, state[p1.id].page, state[p1.id].cards.length));
             embed.addFields({ name: `🔴 ${p1.username}`, value: '⏳ Seleccionando carta...', inline: true });
         } else {
-            embed.addFields({ name: `🔴 ${p1.username}`, value: `✅ **${state[p1.id].selected.card.name}**`, inline: true });
+            embed.addFields({ name: `🔴 ${p1.username}`, value: `**${state[p1.id].selected.card.name}**`, inline: true });
         }
 
         if (!state[p2.id].selected) {
@@ -289,7 +287,7 @@ async function startSelectionPhase(interaction, p1, p2, p1Data, p2Data) {
             rows.push(createPageButtons(p2, state[p2.id].page, state[p2.id].cards.length));
             embed.addFields({ name: `🔵 ${p2.username}`, value: '⏳ Seleccionando carta...', inline: true });
         } else {
-            embed.addFields({ name: `🔵 ${p2.username}`, value: `✅ **${state[p2.id].selected.card.name}**`, inline: true });
+            embed.addFields({ name: `🔵 ${p2.username}`, value: `**${state[p2.id].selected.card.name}**`, inline: true });
         }
 
         return { content: `<@${p1.id}> <@${p2.id}>`, embeds: [embed], components: rows, files: [] };
