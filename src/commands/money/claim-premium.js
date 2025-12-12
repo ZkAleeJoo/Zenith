@@ -18,7 +18,7 @@ module.exports = {
         if (!days) {
             return interaction.reply({ 
                 content: '❌ **Código inválido o ya usado.** Verifica que lo escribiste bien.', 
-                ephemeral: true 
+                flags: 64 
             });
         }
 
