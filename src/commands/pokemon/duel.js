@@ -96,7 +96,7 @@ module.exports = {
         const collector = msg.createMessageComponentCollector({ componentType: ComponentType.Button, time: 60000 });
 
         collector.on('collect', async i => {
-            if (i.user.id !== p2.id) return i.reply({ content: '🚫 No es tu duelo.', ephemeral: true });
+            if (i.user.id !== p2.id) return i.reply({ content: '🚫 No es tu duelo.', flags: 64 });
 
             if (i.customId === 'deny_duel') {
                 collector.stop();
@@ -147,7 +147,7 @@ async function startSelectionPhase(interaction, p1, p2, p1Data, p2Data) {
 
     selector.on('collect', async i => {
         const uid = i.user.id;
-        if (!state[uid]) return i.reply({ content: 'Espectador.', ephemeral: true });
+        if (!state[uid]) return i.reply({ content: 'Espectador.', flags: 64 });
 
         if (i.customId.includes('prev') || i.customId.includes('next')) {
             const action = i.customId.split('_')[0]; 
@@ -165,7 +165,7 @@ async function startSelectionPhase(interaction, p1, p2, p1Data, p2Data) {
             await i.deferUpdate(); 
             const stats = await getBattleStats(card.id, card.isShiny);
             
-            if (!stats) return i.followUp({ content: 'Error de conexión con PokéAPI.', ephemeral: true });
+            if (!stats) return i.followUp({ content: 'Error de conexión con PokéAPI.', flags: 64 });
 
             state[uid].selected = { card, stats, user: i.user };
 
