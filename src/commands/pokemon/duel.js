@@ -5,6 +5,8 @@ const { EMOJIS, TYPE_COLORS } = require('../../utils/constants');
 const Canvas = require('canvas');
 const path = require('path');
 
+//CAMBIAR TODO EL CÓDIGO PARA QUE ESTÉ EN ESPAÑOL
+
 try {
     Canvas.registerFont(path.join(__dirname, '../../assets/fonts/PressStart2P-Regular.ttf'), { family: 'PressStart2P' });
 } catch (error) {
