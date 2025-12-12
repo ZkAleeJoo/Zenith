@@ -5,106 +5,161 @@ const { EMOJIS, TYPE_COLORS } = require('../../utils/constants');
 const Canvas = require('canvas');
 const path = require('path');
 
-//CAMBIAR TODO EL CÓDIGO PARA QUE ESTÉ EN ESPAÑOL
-
+const fontPath = path.join(__dirname, '../../assets/fonts/PressStart2P-Regular.ttf');
 try {
-    Canvas.registerFont(path.join(__dirname, '../../assets/fonts/PressStart2P-Regular.ttf'), { family: 'PressStart2P' });
-} catch (error) {
-    console.log('Advertencia: No se pudo cargar la fuente PressStart2P. Usando fuente predeterminada.');
-}
+    if (require('fs').existsSync(fontPath)) {
+        Canvas.registerFont(fontPath, { family: 'PressStart2P' });
+    }
+} catch (error) { console.log('Fuente no cargada, usando default sans-serif'); }
 
 const statsCache = new Map();
 
-function drawTextHealthBar(current, max) {
-    const totalBars = 10; 
-    const percentage = Math.max(0, Math.min(1, current / max));
-    const filled = Math.round(percentage * totalBars);
-    const empty = totalBars - filled;
-    
-    const fillChar = percentage > 0.5 ? '🟩' : (percentage > 0.2 ? '🟨' : '🟥');
-    const emptyChar = '⬛'; 
-    
-    return `${fillChar.repeat(filled)}${emptyChar.repeat(empty)}`;
-}
-
 async function generateBattleImage(f1, f2) {
     const width = 800;
-    const height = 400;
+    const height = 500; 
     const canvas = Canvas.createCanvas(width, height);
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
 
-    const gradient = ctx.createRadialGradient(width / 2, height / 2, 50, width / 2, height / 2, 400);
-    gradient.addColorStop(0, '#2b323c');
-    gradient.addColorStop(1, '#1a1d23');
-    ctx.fillStyle = gradient;
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+    bgGrad.addColorStop(0, '#1a1c2c');
+    bgGrad.addColorStop(0.6, '#2b323c');
+    bgGrad.addColorStop(1, '#141619');
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
-    ctx.fillStyle = '#141619';
-    ctx.fillRect(0, 300, width, 100);
-    ctx.strokeStyle = '#3e4652';
-    ctx.lineWidth = 4;
+
+    ctx.fillStyle = '#111';
     ctx.beginPath();
-    ctx.moveTo(0, 300);
-    ctx.lineTo(width, 300);
+    ctx.ellipse(width / 2, 420, 380, 60, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.strokeStyle = '#4a1c40';
+    ctx.lineWidth = 4;
     ctx.stroke();
 
     ctx.save();
-    ctx.font = '50px "PressStart2P"';
-    ctx.fillStyle = '#ff4757';
-    ctx.shadowColor = '#ff6b81';
-    ctx.shadowBlur = 15;
+    ctx.font = '60px "PressStart2P"';
+    ctx.fillStyle = (f1.stats.hp === 0 || f2.stats.hp === 0) ? '#ff4757' : 'rgba(255,255,255,0.1)';
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    const text = (f1.stats.hp === 0 || f2.stats.hp === 0) ? 'FINISH' : 'VS';
-    ctx.fillText(text, width / 2, height / 2 - 40);
+    ctx.shadowColor = '#000';
+    ctx.shadowBlur = 10;
+    const centerText = (f1.stats.hp === 0 || f2.stats.hp === 0) ? 'K.O.' : 'VS';
+    ctx.fillText(centerText, width / 2, height / 2);
     ctx.restore();
 
     try {
         const img1 = await Canvas.loadImage(f1.stats.sprite);
         const img2 = await Canvas.loadImage(f2.stats.sprite);
 
-        ctx.drawImage(img1, 100, 180, 200, 200);
-        ctx.drawImage(img2, 500, 180, 200, 200);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.beginPath();
+        ctx.ellipse(200, 430, 80, 20, 0, 0, Math.PI * 2); 
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(600, 430, 80, 20, 0, 0, Math.PI * 2);  
+        ctx.fill();
+
+        const size = 250;
+        ctx.drawImage(img1, 75, 440 - size, size, size);
+
+        ctx.save();
+        ctx.translate(600 + (size/2), 440 - size);
+        ctx.scale(-1, 1);
+        ctx.drawImage(img2, 0, 0, size, size); 
+        ctx.restore();
+
     } catch (e) {
-        console.error('Error cargando sprites:', e);
+        console.error('Error sprites:', e);
     }
 
-    const drawBar = (x, y, current, max, name) => {
-        const barW = 220;
-        const barH = 24;
-        const pct = Math.max(0, current / max);
+    const drawHUD = (x, y, fighter, alignRight) => {
+        const barW = 280;
+        const barH = 20;
+        const stats = fighter.stats;
+        
+        const textX = alignRight ? x + barW : x;
+        const align = alignRight ? 'right' : 'left';
 
         ctx.fillStyle = '#fff';
-        ctx.font = '14px "PressStart2P"';
+        ctx.font = '20px "PressStart2P"';
+        ctx.textAlign = align;
         ctx.shadowColor = '#000';
         ctx.shadowBlur = 4;
-        ctx.fillText(name.slice(0, 15), x, y - 10);
-        ctx.shadowBlur = 0;
-
-        ctx.fillStyle = '#2f3640';
-        ctx.fillRect(x, y, barW, barH);
+        ctx.fillText(stats.name, textX, y - 15);
         
+        ctx.fillStyle = '#333';
+        roundRect(ctx, x, y, barW, barH, 10, true, false);
+
+        const hpPercent = Math.max(0, stats.hp / stats.max_hp);
+        let hpColor = '#2ecc71'; 
+        if (hpPercent < 0.5) hpColor = '#f1c40f'; 
+        if (hpPercent < 0.2) hpColor = '#e74c3c'; 
+
+        if (hpPercent > 0) {
+            const grad = ctx.createLinearGradient(x, 0, x + barW, 0);
+            grad.addColorStop(0, hpColor);
+            grad.addColorStop(1, shadeColor(hpColor, -40));
+            
+            ctx.fillStyle = grad;
+
+            if (alignRight) {
+                 roundRect(ctx, x + (barW * (1 - hpPercent)), y, barW * hpPercent, barH, 10, true, false);
+            } else {
+                 roundRect(ctx, x, y, barW * hpPercent, barH, 10, true, false);
+            }
+        }
+
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, barW, barH);
+        roundRect(ctx, x, y, barW, barH, 10, false, true);
 
-        let color = '#2ecc71'; 
-        if (pct < 0.5) color = '#f1c40f';
-        if (pct < 0.2) color = '#e74c3c'; 
-        
-        ctx.fillStyle = color;
-        ctx.fillRect(x + 2, y + 2, (barW - 4) * pct, barH - 4);
-
-        ctx.font = '10px "PressStart2P"';
         ctx.fillStyle = '#fff';
-        ctx.fillText(`${current}/${max}`, x + barW - 5, y - 35); 
+        ctx.font = '12px "PressStart2P"';
+        ctx.fillText(`${stats.hp}/${stats.max_hp} HP`, textX, y + 40);
+        
+        if (fighter.card.isShiny) {
+             ctx.fillStyle = '#FFD700';
+             ctx.fillText('✨', alignRight ? x - 25 : x + barW + 10, y);
+        }
     };
 
-    drawBar(50, 60, f1.stats.hp, f1.stats.max_hp, f1.stats.name);
-    drawBar(530, 340, f2.stats.hp, f2.stats.max_hp, f2.stats.name);
+    drawHUD(40, 60, f1, false);      
+    drawHUD(480, 60, f2, true);      
 
     return canvas.toBuffer();
+}
+
+function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+}
+
+function shadeColor(color, percent) {
+    var R = parseInt(color.substring(1,3),16);
+    var G = parseInt(color.substring(3,5),16);
+    var B = parseInt(color.substring(5,7),16);
+    R = parseInt(R * (100 + percent) / 100);
+    G = parseInt(G * (100 + percent) / 100);
+    B = parseInt(B * (100 + percent) / 100);
+    R = (R<255)?R:255;  
+    G = (G<255)?G:255;  
+    B = (B<255)?B:255;  
+    var RR = ((R.toString(16).length==1)?"0"+R.toString(16):R.toString(16));
+    var GG = ((G.toString(16).length==1)?"0"+G.toString(16):G.toString(16));
+    var BB = ((B.toString(16).length==1)?"0"+B.toString(16):B.toString(16));
+    return "#"+RR+GG+BB;
 }
 
 async function getBattleStats(pokemonId, isShiny) {
@@ -114,15 +169,18 @@ async function getBattleStats(pokemonId, isShiny) {
         const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`);
         const data = await res.json();
 
+        const sprite = data.sprites.other['official-artwork'].front_default || data.sprites.other['home'].front_default;
+        const shinySprite = data.sprites.other['official-artwork'].front_shiny || data.sprites.other['home'].front_shiny;
+
         const stats = {
             name: data.name.charAt(0).toUpperCase() + data.name.slice(1),
-            hp: data.stats[0].base_stat * 3, 
-            max_hp: data.stats[0].base_stat * 3,
+            hp: data.stats[0].base_stat * 4, 
+            max_hp: data.stats[0].base_stat * 4,
             atk: data.stats[1].base_stat,
             def: data.stats[2].base_stat,
             spd: data.stats[5].base_stat,
-            sprite: data.sprites.other['home'].front_default || data.sprites.front_default, 
-            shiny_sprite: data.sprites.other['home'].front_shiny || data.sprites.front_shiny
+            sprite: sprite, 
+            shiny_sprite: shinySprite
         };
 
         statsCache.set(pokemonId, stats);
@@ -131,13 +189,12 @@ async function getBattleStats(pokemonId, isShiny) {
 }
 
 function applyShinyBonus(base, isShiny) {
-    const s = { ...base };
+    const s = { ...base }; 
     if (isShiny) {
-        s.hp = Math.floor(s.hp * 1.15); 
-        s.max_hp = Math.floor(s.max_hp * 1.15);
+        s.hp = Math.floor(s.hp * 1.2); 
+        s.max_hp = Math.floor(s.max_hp * 1.2);
         s.atk = Math.floor(s.atk * 1.1); 
         s.sprite = s.shiny_sprite;
-        s.isBuffed = true;
     }
     return s;
 }
@@ -157,40 +214,47 @@ module.exports = {
         const p1 = interaction.user;
         const p2 = interaction.options.getUser('oponente');
 
-        if (p2.id === p1.id) return interaction.editReply('🛑 **Error de matchmaking:** No puedes pelear contigo mismo.');
-        if (p2.bot) return interaction.editReply('🤖 **Error:** Los sistemas automatizados no aceptan duelos.');
+        if (p2.id === p1.id) return interaction.editReply('🛑 **Error:** No puedes pelear contra ti mismo (esquizofrenia no incluida).');
+        if (p2.bot) return interaction.editReply('🤖 **Error:** Los bots son pacifistas (por ahora).');
 
         const p1Data = getUserData(p1.id);
         const p2Data = getUserData(p2.id);
 
-        if (p1Data.cards.length === 0) return interaction.editReply(`${EMOJIS.error} No tienes cartas. Usa \`/open\`.`);
-        if (p2Data.cards.length === 0) return interaction.editReply(`${EMOJIS.error} Tu oponente no tiene mazo.`);
+        if (p1Data.cards.length === 0) return interaction.editReply(`${EMOJIS.error} No tienes cartas. Usa \`/open\` primero.`);
+        if (p2Data.cards.length === 0) return interaction.editReply(`${EMOJIS.error} Tu oponente no tiene mazo de combate.`);
 
         const vsBuffer = await createBattleVersus(p1, p2);
         const vsAttachment = new AttachmentBuilder(vsBuffer, { name: 'versus.png' });
 
         const inviteEmbed = new EmbedBuilder()
             .setTitle('🏟️ ARENA DE COMBATE')
-            .setDescription(`# ${p1} 🆚 ${p2}\n\n**${p1.username}** ha lanzado un desafío oficial.\n¿Aceptas poner en juego tu honor?`)
+            .setDescription(`# ${p1.username} 🆚 ${p2.username}\n\nSe ha lanzado un guante blanco.\n¿Aceptas el desafío por el honor y la gloria?`)
             .setColor(0xFF0000)
             .setImage('attachment://versus.png')
-            .setFooter({ text: 'Sistema de Batalla Zenith v2.0' });
+            .setFooter({ text: 'Zenith Battle System v3.0' });
 
         const inviteRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('accept_duel').setLabel('ACEPTAR RETO').setStyle(ButtonStyle.Success).setEmoji('⚔️'),
-            new ButtonBuilder().setCustomId('deny_duel').setLabel('RECHAZAR').setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId('accept_duel').setLabel('ACEPTAR DUELO').setStyle(ButtonStyle.Success).setEmoji('⚔️'),
+            new ButtonBuilder().setCustomId('deny_duel').setLabel('HUIR').setStyle(ButtonStyle.Danger)
         );
 
-        const msg = await interaction.editReply({ content: `🔔 Llamando a ${p2}...`, embeds: [inviteEmbed], components: [inviteRow], files: [vsAttachment] });
+        const msg = await interaction.editReply({ 
+            content: `🔔 <@${p2.id}> has sido desafiado!`, 
+            embeds: [inviteEmbed], 
+            components: [inviteRow], 
+            files: [vsAttachment] 
+        });
 
         const collector = msg.createMessageComponentCollector({ componentType: ComponentType.Button, time: 60000 });
 
         collector.on('collect', async i => {
-            if (i.user.id !== p2.id) return i.reply({ content: '🚫 No es tu duelo.', flags: 64 });
+            if (i.user.id !== p2.id) {
+                return i.reply({ content: '🚫 Tú no eres el retador, siéntate y mira.', ephemeral: true });
+            }
 
             if (i.customId === 'deny_duel') {
                 collector.stop();
-                await i.update({ content: '🏳️ **Batalla cancelada por el oponente.**', embeds: [], components: [], files: [] });
+                await i.update({ content: '🏳️ **El oponente ha huido del combate.**', embeds: [], components: [], files: [] });
                 return;
             }
 
@@ -209,27 +273,29 @@ async function startSelectionPhase(interaction, p1, p2, p1Data, p2Data) {
 
     const getPayload = () => {
         const rows = [];
-        
+        const embed = new EmbedBuilder()
+            .setTitle('🎴 FASE DE SELECCIÓN TÁCTICA')
+            .setDescription('Elige a tu campeón sabiamente.')
+            .setColor('#2B2D31')
+            .setFooter({ text: 'Los Shinys tienen +20% HP y +10% ATK' });
+
         if (!state[p1.id].selected) {
             rows.push(createCardMenu(p1, state[p1.id].cards, state[p1.id].page));
             rows.push(createPageButtons(p1, state[p1.id].page, state[p1.id].cards.length));
+            embed.addFields({ name: `🔴 ${p1.username}`, value: '⏳ Seleccionando carta...', inline: true });
+        } else {
+            embed.addFields({ name: `🔴 ${p1.username}`, value: `✅ **${state[p1.id].selected.card.name}**`, inline: true });
         }
 
         if (!state[p2.id].selected) {
             rows.push(createCardMenu(p2, state[p2.id].cards, state[p2.id].page));
             rows.push(createPageButtons(p2, state[p2.id].page, state[p2.id].cards.length));
+            embed.addFields({ name: `🔵 ${p2.username}`, value: '⏳ Seleccionando carta...', inline: true });
+        } else {
+            embed.addFields({ name: `🔵 ${p2.username}`, value: `✅ **${state[p2.id].selected.card.name}**`, inline: true });
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle('🎴 FASE DE SELECCIÓN TÁCTICA')
-            .setColor('#2B2D31')
-            .addFields(
-                { name: `🔴 ${p1.username}`, value: state[p1.id].selected ? `✅ LISTO: **${state[p1.id].selected.name}**` : '⏳ Eligiendo...', inline: true },
-                { name: `🔵 ${p2.username}`, value: state[p2.id].selected ? `✅ LISTO: **${state[p2.id].selected.name}**` : '⏳ Eligiendo...', inline: true }
-            )
-            .setFooter({ text: 'Usa los botones para ver más cartas de tu inventario.' });
-
-        return { content: null, embeds: [embed], components: rows, files: [] };
+        return { content: `<@${p1.id}> <@${p2.id}>`, embeds: [embed], components: rows, files: [] };
     };
 
     const msg = await interaction.editReply(getPayload());
@@ -237,7 +303,7 @@ async function startSelectionPhase(interaction, p1, p2, p1Data, p2Data) {
 
     selector.on('collect', async i => {
         const uid = i.user.id;
-        if (!state[uid]) return i.reply({ content: 'Espectador.', flags: 64 });
+        if (!state[uid]) return i.reply({ content: '🤫 Silencio en la grada.', ephemeral: true });
 
         if (i.customId.includes('prev') || i.customId.includes('next')) {
             const action = i.customId.split('_')[0]; 
@@ -255,7 +321,7 @@ async function startSelectionPhase(interaction, p1, p2, p1Data, p2Data) {
             await i.deferUpdate(); 
             const stats = await getBattleStats(card.id, card.isShiny);
             
-            if (!stats) return i.followUp({ content: 'Error de conexión con PokéAPI.', flags: 64 });
+            if (!stats) return i.followUp({ content: 'Error de conexión con la base de datos Pokémon.', ephemeral: true });
 
             state[uid].selected = { card, stats, user: i.user };
 
@@ -275,43 +341,29 @@ function createCardMenu(user, allCards, page) {
     const slice = allCards.slice(start, end);
 
     const options = slice.map(c => {
-        let emoji = '🔴'; 
-        if (c.isShiny) emoji = '✨'; 
-
         return new StringSelectMenuOptionBuilder()
             .setLabel(c.name)
-            .setDescription(`CP: ${c.id} | ${c.isShiny ? 'SHINY (+Stats)' : 'Normal'}`)
+            .setDescription(`ID: ${c.id} | ${c.isShiny ? '✨ SHINY BOOST' : 'Normal'}`)
             .setValue(c.uniqueId)
-            .setEmoji(emoji);
+            .setEmoji(c.isShiny ? '✨' : '🔴');
     });
+
+    if (options.length === 0) options.push(new StringSelectMenuOptionBuilder().setLabel('Vacío').setValue('empty'));
 
     return new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
             .setCustomId(`sel_${user.id}`)
-            .setPlaceholder(`Selecciona carta (${start+1}-${Math.min(end, allCards.length)})`)
+            .setPlaceholder(`${user.username}: Elige tu carta (Pág ${page+1})`)
             .addOptions(options)
+            .setDisabled(options[0].data.value === 'empty')
     );
 }
 
 function createPageButtons(user, page, totalCards) {
     const maxPage = Math.ceil(totalCards / 25) - 1;
-    
     return new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId(`prev_${user.id}`)
-            .setLabel('⬅️ Anterior')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(page === 0),
-        new ButtonBuilder()
-            .setCustomId(`info_${user.id}`) 
-            .setLabel(`${page + 1}/${maxPage + 1}`)
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(true),
-        new ButtonBuilder()
-            .setCustomId(`next_${user.id}`)
-            .setLabel('Siguiente ➡️')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(page >= maxPage)
+        new ButtonBuilder().setCustomId(`prev_${user.id}`).setLabel('⬅️').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+        new ButtonBuilder().setCustomId(`next_${user.id}`).setLabel('➡️').setStyle(ButtonStyle.Secondary).setDisabled(page >= maxPage)
     );
 }
 
@@ -321,41 +373,49 @@ async function runBattle(interaction, f1, f2) {
 
     let log = [];
     let turn = 1;
+    const maxTurns = 20;
 
-    while (f1.stats.hp > 0 && f2.stats.hp > 0 && turn <= 15) {
-        const variance = (Math.random() * 0.2) + 0.9;
-        let damage = Math.floor((attacker.stats.atk * variance) - (defender.stats.def * 0.4));
-        if (damage < 10) damage = 10; 
+    while (f1.stats.hp > 0 && f2.stats.hp > 0 && turn <= maxTurns) {
+        const variance = (Math.random() * 0.4) + 0.8;
+        let damage = Math.floor((attacker.stats.atk * variance) - (defender.stats.def * 0.3));
+        
+        if (damage < 15) damage = 15; 
 
-        const isCrit = Math.random() < 0.12;
-        if (isCrit) damage = Math.floor(damage * 1.5);
+        const isCrit = Math.random() < 0.15;
+        if (isCrit) damage = Math.floor(damage * 1.7);
 
         defender.stats.hp -= damage;
         if (defender.stats.hp < 0) defender.stats.hp = 0;
 
-        const icon = attacker.user.id === f1.user.id ? EMOJIS.ball : '🛡️';
-        const critMsg = isCrit ? ' CRÍTICO!' : '';
-        log.push(`- ${attacker.stats.name} impacta por ${damage}${critMsg}`);
+        const icon = attacker.user.id === f1.user.id ? '🔴' : '🔵';
+        const critMsg = isCrit ? ' **¡CRÍTICO!** 💥' : '';
+        
+        log.push(`${icon} **${attacker.stats.name}** atacó: -${damage} HP${critMsg}`);
+
         [attacker, defender] = [defender, attacker];
         turn++;
     }
 
     let winner = f1.stats.hp > 0 ? f1 : f2;
+    let loser = f1.stats.hp > 0 ? f2 : f1;
     
-    addCoins(winner.user.id, 150);
+    const prize = 150;
+    addCoins(winner.user.id, prize);
 
     const resultBuffer = await generateBattleImage(f1, f2);
     const resultAttachment = new AttachmentBuilder(resultBuffer, { name: 'battle-result.png' });
 
     const embed = new EmbedBuilder()
         .setTitle(`🏆 ¡VICTORIA PARA ${winner.user.username.toUpperCase()}!`)
-        .setDescription(`**${winner.stats.name}** se alza con la victoria tras ${turn} rondas de combate intenso.\n\n💰 **Recompensa:** +150 ${EMOJIS.money}`)
+        .setDescription(`Tras ${turn-1} rondas, **${winner.stats.name}** demostró su superioridad.\n\n` + 
+                        `🏅 **Ganador:** ${winner.user} (+${prize} ${EMOJIS.money})\n` +
+                        `💀 **Perdedor:** ${loser.user}`)
         .setColor(TYPE_COLORS.legendary || 0xFFD700)
         .setImage('attachment://battle-result.png') 
         .addFields(
             {
-                name: '📜 Resumen de Batalla',
-                value: `\`\`\`\n${log.slice(-6).join('\n')}\n\`\`\``, 
+                name: '📜 Log de Batalla (Últimos movimientos)',
+                value: log.slice(-8).join('\n') || 'Batalla instantánea.', 
                 inline: false
             }
         );
