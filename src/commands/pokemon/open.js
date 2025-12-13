@@ -21,6 +21,42 @@ const TCG_COLORS = {
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+let cachedSets = [];
+let lastSetFetch = 0;
+
+async function getRandomCard(apiKey) {
+    if (cachedSets.length === 0 || Date.now() - lastSetFetch > 3600000) {
+        console.log('[API] Actualizando lista de Sets...');
+        const setsRes = await fetch('https://api.pokemontcg.io/v2/sets', {
+            headers: { 'X-Api-Key': apiKey }
+        });
+        const setsJson = await setsRes.json();
+        cachedSets = setsJson.data;
+        lastSetFetch = Date.now();
+    }
+
+    if (!cachedSets || cachedSets.length === 0) throw new Error("No se pudieron cargar los Sets.");
+    const randomSet = cachedSets[Math.floor(Math.random() * cachedSets.length)];
+
+    const randomPage = Math.floor(Math.random() * randomSet.total) + 1;
+
+    console.log(`[API] Buscando en Set: ${randomSet.name} (Total: ${randomSet.total}) -> Pág: ${randomPage}`);
+
+    const cardRes = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${randomSet.id}&page=${randomPage}&pageSize=1`, {
+        headers: { 'X-Api-Key': apiKey }
+    });
+
+    if (!cardRes.ok) throw new Error(`API Error: ${cardRes.status}`);
+    
+    const cardJson = await cardRes.json();
+    if (!cardJson.data || cardJson.data.length === 0) {
+        console.log('[API] Set vacío, reintentando...');
+        return getRandomCard(apiKey);
+    }
+
+    return cardJson.data[0];
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('open')
@@ -28,7 +64,6 @@ module.exports = {
 
     async execute(interaction) {
         const userId = interaction.user.id;
-        
         const userData = getUserData(userId);
         const isPremium = userData.isPremium;
         const userCooldown = isPremium ? 5000 : CONFIG.COOLDOWN_MS; 
@@ -56,33 +91,11 @@ module.exports = {
         cooldowns.set(userId, Date.now());
         setTimeout(() => cooldowns.delete(userId), userCooldown);
 
-        await interaction.reply({ content: `🎒 **Abriendo sobre TCG...** \`[▉▉▉_______]\`` });
+        await interaction.reply({ content: `**Abriendo sobre TCG...** \`[▉▉▉_______]\`` });
 
         try {
-            console.log(`[OPEN] Buscando carta para ${interaction.user.tag}...`);
-
-            const randomPage = Math.floor(Math.random() * 10000) + 1;
-            
-            const options = {
-                method: 'GET',
-                headers: {
-                    'X-Api-Key': process.env.POKEMON_TCG_API_KEY || ''
-                }
-            };
-
-            const response = await fetch(`https://api.pokemontcg.io/v2/cards?page=${randomPage}&pageSize=1`, options);
-            
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`);
-            }
-
-            const json = await response.json();
-            
-            if (!json.data || json.data.length === 0) {
-                throw new Error("La API no devolvió cartas (Página vacía).");
-            }
-
-            const card = json.data[0];
+            const apiKey = process.env.POKEMON_TCG_API_KEY || '';
+            const card = await getRandomCard(apiKey);
 
             addCard(userId, card);
 
@@ -95,14 +108,14 @@ module.exports = {
             const rarity = card.rarity ? card.rarity.toLowerCase() : "";
             if (rarity.includes("rare")) rarityIcon = "⭐";
             if (rarity.includes("v") || rarity.includes("ex") || rarity.includes("gx")) rarityIcon = "✨";
-            if (rarity.includes("secret") || rarity.includes("rainbow")) rarityIcon = "🌈";
+            if (rarity.includes("secret") || rarity.includes("rainbow") || rarity.includes("illustration")) rarityIcon = "🌈";
 
             let priceText = "N/A";
             if (card.tcgplayer && card.tcgplayer.prices) {
                 const prices = card.tcgplayer.prices;
                 const priceObj = prices.holofoil || prices.normal || prices.reverseHolofoil || prices['1stEditionHolofoil'];
                 if (priceObj && priceObj.market) {
-                    priceText = `$${priceObj.market}`;
+                    priceText = `$${priceObj.market} USD`;
                 }
             }
 
@@ -116,17 +129,15 @@ module.exports = {
                     { name: 'Tipo', value: card.types ? card.types.join('/') : 'Trainer', inline: true },
                     { name: 'HP', value: card.hp ? card.hp.toString() : '-', inline: true }
                 )
-                .setFooter({ text: `ID: ${card.id} • Mercado: ${priceText}`, iconURL: 'https://images.pokemontcg.io/logo.png' });
+                .setFooter({ text: `ID: ${card.id} • Precio: ${priceText}`, iconURL: card.set.images.symbol });
 
-            await wait(1000); 
-            await interaction.editReply({ content: `🎒 **Sobre Abierto** \`[▉▉▉▉▉▉▉▉▉]\``, embeds: [embed] });
-            console.log(`[OPEN] Éxito: ${card.id}`);
+            await wait(1500); 
+            await interaction.editReply({ content: `**Sobre Abierto** \`[▉▉▉▉▉▉▉▉▉]\``, embeds: [embed] });
+            console.log(`[OPEN] Éxito: ${card.name} (${card.id})`);
 
         } catch (error) {
             console.error("[OPEN] Error:", error);
-            
             refundCoins(userId, COST); 
-            
             await interaction.editReply({ 
                 content: `❌ **Error:** No se pudo abrir el sobre.\n> \`${error.message}\`\n💰 Tus monedas han sido devueltas.` 
             });
