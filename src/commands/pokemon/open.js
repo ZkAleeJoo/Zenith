@@ -1,147 +1,105 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { addCard, removeCoins, getUserData } = require('../../utils/dataHandler');
-const { EMOJIS, LEGENDARY_IDS, TYPE_COLORS, CONFIG } = require('../../utils/constants');
+const { EMOJIS, CONFIG, TYPE_COLORS } = require('../../utils/constants');
 
 const cooldowns = new Map();
 
-function createProgressBar(value, max = 150) {
-    const totalBars = 10;
-    const progress = Math.min(Math.round((value / max) * totalBars), totalBars);
-    const empty = totalBars - progress;
-    return '`' + '■'.repeat(progress) + '□'.repeat(empty) + '`';
-}
+const TCG_COLORS = {
+    'Colorless': 0xF0F0F0,
+    'Darkness': 0x3E2723,
+    'Dragon': 0xC4A484,
+    'Fairy': 0xF8BBD0,
+    'Fighting': 0xD32F2F,
+    'Fire': 0xFF5722,
+    'Grass': 0x4CAF50,
+    'Lightning': 0xFFEB3B,
+    'Metal': 0x9E9E9E,
+    'Psychic': 0x9C27B0,
+    'Water': 0x2196F3
+};
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('open')
-        .setDescription(`Abre una carta misteriosa por ${CONFIG.PACK_PRICE} Monedas.`),
+        .setDescription(`Abre un sobre de Cartas Oficiales TCG por ${CONFIG.PACK_PRICE} Monedas.`),
 
     async execute(interaction) {
         const userId = interaction.user.id;
         const userData = getUserData(userId);
-
-        const isPremium = userData.isPremium; 
-        
-        const userCooldown = isPremium ? 30000 : CONFIG.COOLDOWN_MS;
+        const isPremium = userData.isPremium;
+        const userCooldown = isPremium ? 5000 : CONFIG.COOLDOWN_MS; 
 
         if (cooldowns.has(userId)) {
-            const expirationTime = cooldowns.get(userId) + userCooldown; 
+            const expirationTime = cooldowns.get(userId) + userCooldown;
             if (Date.now() < expirationTime) {
                 const timeLeft = Math.ceil((expirationTime - Date.now()) / 1000);
                 return interaction.reply({ 
-                    content: `⏳ **¡Ey! Vas muy rápido** \`|\` Espera **${timeLeft} segundos** para abrir otro sobre.${isPremium ? ' ⚡ (Cooldown VIP)' : ''}`, 
+                    content: `⏳ **Espera un poco** \`|\` Tu mazo se está barajando. Vuelve en **${timeLeft}s**.`, 
                     flags: 64 
                 });
             }
         }
 
         const COST = CONFIG.PACK_PRICE;
-        
         if (userData.balance < COST) {
             return interaction.reply({ 
-                content: `${EMOJIS.error} Saldo insuficiente \`|\` Necesitas más monedas para abrir un sobre **-** usa \`/daily\` para conseguir más`,
+                content: `${EMOJIS.error} **Fondos Insuficientes** \`|\` Necesitas **${COST}** monedas.`,
                 flags: 64
             });
         }
 
-        cooldowns.set(userId, Date.now());
-        setTimeout(() => cooldowns.delete(userId), userCooldown); 
+        // 3. Cobrar y Poner Cooldown
         removeCoins(userId, COST);
+        cooldowns.set(userId, Date.now());
+        setTimeout(() => cooldowns.delete(userId), userCooldown);
 
-        const loadingMsg = isPremium 
-            ? `${EMOJIS.card} \`|\` **Invocando carta...** *-${COST}* ${EMOJIS.money}`
-            : `${EMOJIS.card} \`|\` **Invocando carta...** *-${COST}* ${EMOJIS.money}`;
-
-        await interaction.reply({ content: loadingMsg });
+        await interaction.reply({ content: `**Abriendo sobre TCG...** \`[▉▉▉_______]\`` });
 
         try {
-            const legendChance = isPremium ? 0.02 : 0.01;
-            const shinyChance = isPremium ? 0.01 : 0.005;
-
-            let isLegendary = Math.random() < legendChance; 
-            const isShiny = Math.random() < shinyChance;
-
-            let pokemonId;
-            if (isLegendary) {
-                pokemonId = LEGENDARY_IDS[Math.floor(Math.random() * LEGENDARY_IDS.length)];
-            } else {
-                pokemonId = Math.floor(Math.random() * 1024) + 1;
-            }
-            if (LEGENDARY_IDS.includes(pokemonId)) isLegendary = true;
-
-            const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`);
-            const data = await response.json();
-
-            const pokeName = data.name.charAt(0).toUpperCase() + data.name.slice(1);
-            const typeMain = data.types[0].type.name; 
-            const typesFormatted = data.types.map(t => t.type.name.toUpperCase()).join(' | ');
-
-            const image = isShiny 
-                ? data.sprites.other['home'].front_shiny 
-                : data.sprites.other['official-artwork'].front_default;
-
-            let embedColor = TYPE_COLORS[typeMain] || TYPE_COLORS.base;
-            if (isLegendary) embedColor = TYPE_COLORS.legendary; 
-            if (isShiny) embedColor = TYPE_COLORS.shiny;     
-
-            const hp = data.stats[0].base_stat;
-            const atk = data.stats[1].base_stat;
-            const def = data.stats[2].base_stat;
-            const spd = data.stats[5].base_stat;
-
-            const newCardData = {
-                id: data.id,
-                name: pokeName,
-                isShiny: isShiny,
-                types: typesFormatted
-            };
-
-            const isNew = addCard(userId, newCardData);
-
-            const titleIcon = isLegendary ? EMOJIS.rare_legend : (isShiny ? EMOJIS.cool : EMOJIS.classic);
+            const randomPage = Math.floor(Math.random() * 15000) + 1;
             
+            const response = await fetch(`https://api.pokemontcg.io/v2/cards?page=${randomPage}&pageSize=1`);
+            const json = await response.json();
+            
+            if (!json.data || json.data.length === 0) {
+                throw new Error("Carta vacía recibida de la API");
+            }
+
+            const card = json.data[0];
+
+            addCard(userId, card);
+
+
+            let color = 0x2B2D31; 
+            if (card.types && card.types.length > 0) {
+                color = TCG_COLORS[card.types[0]] || 0x2B2D31;
+            }
+
+            let rarityIcon = "🔹";
+            if (card.rarity?.includes("Rare")) rarityIcon = "⭐";
+            if (card.rarity?.includes("V") || card.rarity?.includes("EX") || card.rarity?.includes("GX")) rarityIcon = "✨";
+            if (card.rarity?.includes("Secret") || card.rarity?.includes("Rainbow")) rarityIcon = "🌈";
+
             const embed = new EmbedBuilder()
-                .setTitle(`${titleIcon} ${isLegendary ? '¡POKÉMON RARO INVOCADO!' : ''} ${pokeName} #${data.id}`)
-                .setColor(embedColor)
-                .setImage(image) 
+                .setTitle(`${rarityIcon} ¡NUEVA CARTA OBTENIDA!`)
+                .setDescription(`Has conseguido: **${card.name}**\n*${card.set.series} - ${card.set.name}*`)
+                .setColor(color)
+                .setImage(card.images.large) 
                 .addFields(
-                    { name: `${EMOJIS.ball} Tipo`, value: `**${typesFormatted}**`, inline: true },
-                    { name: `${EMOJIS.measure} Peso/Altura`, value: `${data.weight / 10}kg | ${data.height / 10}m`, inline: true },
-                    { name: `${EMOJIS.stats} Estadísticas Base`, value: `**HP:** ${createProgressBar(hp)} **${hp}**\n**ATK:** ${createProgressBar(atk)} **${atk}**\n**DEF:** ${createProgressBar(def)} **${def}**\n**VEL:** ${createProgressBar(spd)} **${spd}**`, inline: false }
-                );
-
-            let rarityText = 'Rareza: Común';
-            if (isLegendary) rarityText = 'Rareza: 👑 RARA';
-            if (isShiny) rarityText += ' | ✨ SHINY';
-
-            const collectionStatus = isNew ? "✅ NUEVA (Guardada)" : "⚠️ REPETIDA (Descartada)";
-            
-            let footerText = `Zenith TCG • ${rarityText} • ${collectionStatus}`;
-            if (isPremium) footerText += " • 👑 Zenith Vip";
-
-            embed.setFooter({ 
-                text: footerText, 
-                iconURL: 'https://img.pokemondb.net/sprites/scarlet-violet/normal/gengar.png' 
-            });
-
-            if (isLegendary && isShiny) {
-                embed.setAuthor({ name: `¡¡INCREIBLE!! POKÉMON RARO VARIOCOLOR`, iconURL: 'https://cdn-icons-png.flaticon.com/512/1694/1694364.png' });
-                embed.setDescription(`**¡Has roto el juego! Un pokémon raro shiny ha aparecido.**\n${EMOJIS.cool}${EMOJIS.cool}${EMOJIS.cool}`);
-            } else if (isLegendary) {
-                embed.setAuthor({ name: `¡FELICIDADES! ENERGÍA MASIVA DETECTADA`, iconURL: 'https://cdn-icons-png.flaticon.com/512/1694/1694364.png' });
-            } else if (isShiny) {
-                embed.setAuthor({ name: `¡QUÉ SUERTE! VARIOCOLOR`, iconURL: 'https://cdn-icons-png.flaticon.com/512/1694/1694364.png' });
-            }
+                    { name: 'Rareza', value: card.rarity || 'Desconocida', inline: true },
+                    { name: 'Tipo', value: card.types ? card.types.join('/') : 'Trainer', inline: true },
+                    { name: 'HP', value: card.hp || 'N/A', inline: true }
+                )
+                .setFooter({ text: `ID: ${card.id} • Precio Mercado (TCGPlayer): $${card.tcgplayer?.prices?.holofoil?.market || 'N/A'}` });
 
             setTimeout(async () => {
-                await interaction.editReply({ content: null, embeds: [embed] });
-            }, 1500);
+                await interaction.editReply({ content: `**Sobre Abierto** \`[▉▉▉▉▉▉▉▉▉]\` ¡Listo!`, embeds: [embed] });
+            }, 1000);
 
         } catch (error) {
             console.error(error);
-            addCoins(userId, COST);
-            cooldowns.delete(userId); 
-            await interaction.editReply({ content: `${EMOJIS.error} **¡El Pokémon escapó!** Hubo un error de conexión y te hemos devuelto tus monedas.` });
+            addCoins(userId, COST); 
+            await interaction.editReply({ content: `❌ **Error de fábrica:** El sobre estaba vacío. Se te han devuelto las monedas.` });
         }
     },
 };
