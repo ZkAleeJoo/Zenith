@@ -1,4 +1,3 @@
-// src/database/db.js
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
@@ -12,16 +11,18 @@ const db = new Database(path.join(dataDir, 'zenith.sqlite'), { verbose: null });
 db.pragma('journal_mode = WAL');
 
 const initDB = () => {
-    // 1. TABLA USUARIOS (¡Esta era la que faltaba!)
+    // 1. USUARIOS
     db.prepare(`
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             balance INTEGER DEFAULT 500,
-            last_daily INTEGER DEFAULT 0
+            last_daily INTEGER DEFAULT 0,
+            is_premium INTEGER DEFAULT 0, 
+            premium_expires INTEGER DEFAULT 0
         )
     `).run();
 
-    // 2. TABLA CÓDIGOS PREMIUM (Para los canjes)
+    // 2. CÓDIGOS
     db.prepare(`
         CREATE TABLE IF NOT EXISTS premium_codes (
             code TEXT PRIMARY KEY,
@@ -31,36 +32,24 @@ const initDB = () => {
         )
     `).run();
 
-    // 3. MIGRACIÓN AUTOMÁTICA
-    try {
-        const tableInfo = db.pragma('table_info(users)');
-        const hasPremium = tableInfo.some(col => col.name === 'is_premium');
-        
-        if (!hasPremium) {
-            console.log('🔄 Actualizando base de datos a versión Premium...');
-            db.prepare('ALTER TABLE users ADD COLUMN is_premium INTEGER DEFAULT 0').run();
-            db.prepare('ALTER TABLE users ADD COLUMN premium_expires INTEGER DEFAULT 0').run();
-            console.log('✅ Columnas Premium agregadas con éxito.');
-        }
-    } catch (error) {
-        console.error("Error en migración:", error);
-    }
-
-    // 4. TABLA CARTAS
+    // 3. CARTAS
     db.prepare(`
         CREATE TABLE IF NOT EXISTS cards (
             uuid TEXT PRIMARY KEY,
             user_id TEXT,
-            pokemon_id INTEGER,
+            card_id TEXT, 
             name TEXT,
-            is_shiny INTEGER,
+            supertype TEXT,
+            rarity TEXT,
             types TEXT,
+            set_name TEXT,
+            image_url TEXT,
             obtained_at INTEGER,
             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     `).run();
 
-    // 5. TABLA MERCADO
+    // 4. MERCADO (Adaptado a la nueva estructura de cartas)
     db.prepare(`
         CREATE TABLE IF NOT EXISTS market (
             market_id TEXT PRIMARY KEY,
@@ -73,7 +62,7 @@ const initDB = () => {
         )
     `).run();
 
-    console.log('✅ Base de datos SQLite conectada y tablas sincronizadas.');
+    console.log('✅ Base de datos Zenith TCG conectada y actualizada.');
 };
 
 initDB();
