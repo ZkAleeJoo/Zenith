@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { addCard, removeCoins, getUserData } = require('../../utils/dataHandler');
-const { EMOJIS, CONFIG, TYPE_COLORS } = require('../../utils/constants');
+const { addCard, removeCoins, getUserData, addCoins: refundCoins } = require('../../utils/dataHandler');
+const { EMOJIS, CONFIG } = require('../../utils/constants');
+require('dotenv').config();
 
 const cooldowns = new Map();
 
@@ -18,6 +19,8 @@ const TCG_COLORS = {
     'Water': 0x2196F3
 };
 
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('open')
@@ -25,6 +28,7 @@ module.exports = {
 
     async execute(interaction) {
         const userId = interaction.user.id;
+        
         const userData = getUserData(userId);
         const isPremium = userData.isPremium;
         const userCooldown = isPremium ? 5000 : CONFIG.COOLDOWN_MS; 
@@ -34,7 +38,7 @@ module.exports = {
             if (Date.now() < expirationTime) {
                 const timeLeft = Math.ceil((expirationTime - Date.now()) / 1000);
                 return interaction.reply({ 
-                    content: `⏳ **Espera un poco** \`|\` Tu mazo se está barajando. Vuelve en **${timeLeft}s**.`, 
+                    content: `⏳ **Cooldown** \`|\` Espera **${timeLeft}s** para abrir otro sobre.`, 
                     flags: 64 
                 });
             }
@@ -48,27 +52,39 @@ module.exports = {
             });
         }
 
-        // 3. Cobrar y Poner Cooldown
         removeCoins(userId, COST);
         cooldowns.set(userId, Date.now());
         setTimeout(() => cooldowns.delete(userId), userCooldown);
 
-        await interaction.reply({ content: `**Abriendo sobre TCG...** \`[▉▉▉_______]\`` });
+        await interaction.reply({ content: `🎒 **Abriendo sobre TCG...** \`[▉▉▉_______]\`` });
 
         try {
-            const randomPage = Math.floor(Math.random() * 15000) + 1;
+            console.log(`[OPEN] Buscando carta para ${interaction.user.tag}...`);
+
+            const randomPage = Math.floor(Math.random() * 10000) + 1;
             
-            const response = await fetch(`https://api.pokemontcg.io/v2/cards?page=${randomPage}&pageSize=1`);
+            const options = {
+                method: 'GET',
+                headers: {
+                    'X-Api-Key': process.env.POKEMON_TCG_API_KEY || ''
+                }
+            };
+
+            const response = await fetch(`https://api.pokemontcg.io/v2/cards?page=${randomPage}&pageSize=1`, options);
+            
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
             const json = await response.json();
             
             if (!json.data || json.data.length === 0) {
-                throw new Error("Carta vacía recibida de la API");
+                throw new Error("La API no devolvió cartas (Página vacía).");
             }
 
             const card = json.data[0];
 
             addCard(userId, card);
-
 
             let color = 0x2B2D31; 
             if (card.types && card.types.length > 0) {
@@ -76,30 +92,44 @@ module.exports = {
             }
 
             let rarityIcon = "🔹";
-            if (card.rarity?.includes("Rare")) rarityIcon = "⭐";
-            if (card.rarity?.includes("V") || card.rarity?.includes("EX") || card.rarity?.includes("GX")) rarityIcon = "✨";
-            if (card.rarity?.includes("Secret") || card.rarity?.includes("Rainbow")) rarityIcon = "🌈";
+            const rarity = card.rarity ? card.rarity.toLowerCase() : "";
+            if (rarity.includes("rare")) rarityIcon = "⭐";
+            if (rarity.includes("v") || rarity.includes("ex") || rarity.includes("gx")) rarityIcon = "✨";
+            if (rarity.includes("secret") || rarity.includes("rainbow")) rarityIcon = "🌈";
+
+            let priceText = "N/A";
+            if (card.tcgplayer && card.tcgplayer.prices) {
+                const prices = card.tcgplayer.prices;
+                const priceObj = prices.holofoil || prices.normal || prices.reverseHolofoil || prices['1stEditionHolofoil'];
+                if (priceObj && priceObj.market) {
+                    priceText = `$${priceObj.market}`;
+                }
+            }
 
             const embed = new EmbedBuilder()
-                .setTitle(`${rarityIcon} ¡NUEVA CARTA OBTENIDA!`)
-                .setDescription(`Has conseguido: **${card.name}**\n*${card.set.series} - ${card.set.name}*`)
+                .setTitle(`${rarityIcon} ¡${card.name.toUpperCase()}!`)
+                .setDescription(`*${card.set.series}: ${card.set.name}*`)
                 .setColor(color)
                 .setImage(card.images.large) 
                 .addFields(
-                    { name: 'Rareza', value: card.rarity || 'Desconocida', inline: true },
+                    { name: 'Rareza', value: card.rarity || 'Común', inline: true },
                     { name: 'Tipo', value: card.types ? card.types.join('/') : 'Trainer', inline: true },
-                    { name: 'HP', value: card.hp || 'N/A', inline: true }
+                    { name: 'HP', value: card.hp ? card.hp.toString() : '-', inline: true }
                 )
-                .setFooter({ text: `ID: ${card.id} • Precio Mercado (TCGPlayer): $${card.tcgplayer?.prices?.holofoil?.market || 'N/A'}` });
+                .setFooter({ text: `ID: ${card.id} • Mercado: ${priceText}`, iconURL: 'https://images.pokemontcg.io/logo.png' });
 
-            setTimeout(async () => {
-                await interaction.editReply({ content: `**Sobre Abierto** \`[▉▉▉▉▉▉▉▉▉]\` ¡Listo!`, embeds: [embed] });
-            }, 1000);
+            await wait(1000); 
+            await interaction.editReply({ content: `🎒 **Sobre Abierto** \`[▉▉▉▉▉▉▉▉▉]\``, embeds: [embed] });
+            console.log(`[OPEN] Éxito: ${card.id}`);
 
         } catch (error) {
-            console.error(error);
-            addCoins(userId, COST); 
-            await interaction.editReply({ content: `❌ **Error de fábrica:** El sobre estaba vacío. Se te han devuelto las monedas.` });
+            console.error("[OPEN] Error:", error);
+            
+            refundCoins(userId, COST); 
+            
+            await interaction.editReply({ 
+                content: `❌ **Error:** No se pudo abrir el sobre.\n> \`${error.message}\`\n💰 Tus monedas han sido devueltas.` 
+            });
         }
     },
 };
