@@ -1,18 +1,23 @@
 const db = require('../database/db');
-const { Crypto } = require('crypto'); 
 
 const formatCard = (row) => ({
     uniqueId: row.uuid,
-    id: row.pokemon_id,
-    name: row.name,
-    isShiny: Boolean(row.is_shiny), 
-    types: row.types,
+    id: row.card_id,         
+    name: row.name,           
+    supertype: row.supertype, 
+    rarity: row.rarity,       
+    types: row.types,        
+    setName: row.set_name,   
+    image: row.image_url,    
     obtainedAt: row.obtained_at
 });
 
 module.exports = {
 
-    // --- USUARIOS ---
+    // =================================================
+    // 👤 GESTIÓN DE USUARIOS
+    // =================================================
+
     getUserData: (userId) => {
         let user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
 
@@ -29,7 +34,7 @@ module.exports = {
             lastDaily: user.last_daily,
             isPremium: Boolean(user.is_premium), 
             premiumExpires: user.premium_expires,
-            cards: cardsRaw.map(formatCard)
+            cards: cardsRaw.map(formatCard) 
         };
     },
 
@@ -52,7 +57,9 @@ module.exports = {
         db.prepare('UPDATE users SET last_daily = ? WHERE id = ?').run(Date.now(), userId);
     },
 
-    // --- SISTEMA PREMIUM---
+    // =================================================
+    // 💎 SISTEMA PREMIUM
+    // =================================================
 
     givePremium: (userId, days) => {
         module.exports.getUserData(userId); 
@@ -79,8 +86,6 @@ module.exports = {
         db.prepare('UPDATE users SET is_premium = 0, premium_expires = 0 WHERE id = ?').run(userId);
     },
 
-    // --- CÓDIGOS PREMIUM ---
-
     createPremiumCode: (adminId, days) => {
         const part1 = Math.random().toString(36).substring(2, 6).toUpperCase();
         const part2 = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -96,7 +101,7 @@ module.exports = {
     redeemPremiumCode: (userId, codeInput) => {
         const redeemTransaction = db.transaction(() => {
             const codeData = db.prepare('SELECT * FROM premium_codes WHERE code = ?').get(codeInput);
-            if (!codeData) throw new Error("Código inválido o ya usado.");
+            if (!codeData) return false; 
 
             module.exports.givePremium(userId, codeData.days);
 
@@ -108,33 +113,55 @@ module.exports = {
         try {
             return redeemTransaction();
         } catch (err) {
-            console.error(err); 
+            console.error("Error al canjear código:", err); 
             return false;
         }
     },
 
-    // --- CARTAS Y MERCADO ---
+    // =================================================
+    // 🃏 GESTIÓN DE CARTAS (NUEVO SISTEMA TCG)
+    // =================================================
 
-    addCard: (userId, pokemonData) => {
+    addCard: (userId, tcgCardData) => {
         module.exports.getUserData(userId);
 
         const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        
+        const typesStr = tcgCardData.types ? tcgCardData.types.join(' | ') : 'Special';
+        
         const stmt = db.prepare(`
-            INSERT INTO cards (uuid, user_id, pokemon_id, name, is_shiny, types, obtained_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO cards (uuid, user_id, card_id, name, supertype, rarity, types, set_name, image_url, obtained_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         stmt.run(
-            uniqueId, userId, pokemonData.id, pokemonData.name,
-            pokemonData.isShiny ? 1 : 0, pokemonData.types, Date.now()
+            uniqueId, 
+            userId, 
+            tcgCardData.id,               
+            tcgCardData.name, 
+            tcgCardData.supertype,
+            tcgCardData.rarity || 'Common', 
+            typesStr,
+            tcgCardData.set.name,
+            tcgCardData.images.large,       
+            Date.now()
         );
         return true;
     },
 
+    getCardByUUID: (userId, cardUuid) => {
+        const card = db.prepare('SELECT * FROM cards WHERE uuid = ? AND user_id = ?').get(cardUuid, userId);
+        return card ? formatCard(card) : null; 
+    },
+
+    // =================================================
+    // 🏪 MERCADO GLOBAL
+    // =================================================
+
     getMarketListings: () => {
         const listings = db.prepare(`
             SELECT m.market_id, m.seller_id, m.price, m.listed_at,
-                   c.uuid, c.pokemon_id, c.name, c.is_shiny, c.types, c.obtained_at
+                   c.*
             FROM market m JOIN cards c ON m.card_uuid = c.uuid
         `).all();
 
@@ -143,33 +170,37 @@ module.exports = {
             sellerId: row.seller_id,
             price: row.price,
             listedAt: row.listed_at,
-            card: {
-                uniqueId: row.uuid, id: row.pokemon_id, name: row.name,
-                isShiny: Boolean(row.is_shiny), types: row.types, obtainedAt: row.obtained_at
-            }
+            card: formatCard(row)
         }));
     },
 
-    postToMarket: (userId, pokemonId, price) => {
+    postToMarket: (userId, cardIdInput, price) => {
         const postTransaction = db.transaction(() => {
-            const card = db.prepare('SELECT uuid, name FROM cards WHERE user_id = ? AND pokemon_id = ? LIMIT 1').get(userId, pokemonId);
-            if (!card) throw new Error("No tienes ese Pokémon disponible.");
+            const card = db.prepare('SELECT uuid, name FROM cards WHERE user_id = ? AND card_id = ? LIMIT 1').get(userId, cardIdInput);
+            
+            if (!card) throw new Error("No tienes esa carta en tu colección o el ID es incorrecto.");
 
             const marketId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            
             db.prepare('UPDATE cards SET user_id = ? WHERE uuid = ?').run('MARKET_SYSTEM', card.uuid);
+            
             db.prepare('INSERT INTO market (market_id, seller_id, card_uuid, price, listed_at) VALUES (?, ?, ?, ?, ?)').run(
                 marketId, userId, card.uuid, parseInt(price), Date.now()
             );
             return { success: true, marketId, cardName: card.name };
         });
-        try { return postTransaction(); } catch (err) { return { success: false, message: err.message }; }
+
+        try { 
+            return postTransaction(); 
+        } catch (err) { 
+            return { success: false, message: err.message }; 
+        }
     },
 
     buyFromMarket: (buyerId, marketId) => {
         const buyTransaction = db.transaction(() => {
             const listing = db.prepare(`
-                SELECT m.*, c.name as card_name, c.uuid as card_uuid 
-                FROM market m JOIN cards c ON m.card_uuid = c.uuid 
+                SELECT m.*, c.name as card_name, c.uuid as card_uuid, c.* FROM market m JOIN cards c ON m.card_uuid = c.uuid 
                 WHERE m.market_id = ?
             `).get(marketId);
 
@@ -181,13 +212,19 @@ module.exports = {
 
             db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(listing.price, buyerId);
             db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(listing.price, listing.seller_id);
+            
             db.prepare('UPDATE cards SET user_id = ? WHERE uuid = ?').run(buyerId, listing.card_uuid);
+            
             db.prepare('DELETE FROM market WHERE market_id = ?').run(marketId);
 
-            const fullCard = db.prepare('SELECT * FROM cards WHERE uuid = ?').get(listing.card_uuid);
-            return { success: true, card: formatCard(fullCard), price: listing.price };
+            return { success: true, card: formatCard(listing), price: listing.price };
         });
-        try { return buyTransaction(); } catch (err) { return { success: false, message: err.message }; }
+
+        try { 
+            return buyTransaction(); 
+        } catch (err) { 
+            return { success: false, message: err.message }; 
+        }
     },
 
     removeMarketListing: (userId, marketId) => {
@@ -205,58 +242,61 @@ module.exports = {
             db.prepare('DELETE FROM market WHERE market_id = ?').run(marketId);
             return { success: true, cardName: listing.card_name };
         });
-        try { return removeTransaction(); } catch (err) { return { success: false, message: err.message }; }
+
+        try { 
+            return removeTransaction(); 
+        } catch (err) { 
+            return { success: false, message: err.message }; 
+        }
     },
 
-    processEvolution: (userId, cardsToBurn, newPokemonData) => {
-        const evolutionTransaction = db.transaction(() => {
-            for (const uuid of cardsToBurn) {
-                const card = db.prepare('SELECT uuid FROM cards WHERE uuid = ? AND user_id = ?').get(uuid, userId);
-                if (!card) throw new Error(`La carta ${uuid} ya no existe o no es tuya.`);
-            }
-            const deleteStmt = db.prepare('DELETE FROM cards WHERE uuid = ?');
-            for (const uuid of cardsToBurn) { deleteStmt.run(uuid); }
+    // =================================================
+    // 🤝 SISTEMA DE INTERCAMBIO (TRADE)
+    // =================================================
 
-            const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-            db.prepare(`
-                INSERT INTO cards (uuid, user_id, pokemon_id, name, is_shiny, types, obtained_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `).run(uniqueId, userId, newPokemonData.id, newPokemonData.name, newPokemonData.isShiny ? 1 : 0, newPokemonData.types, Date.now());
-            return true;
-        });
-        try { return evolutionTransaction(); } catch (error) { return false; }
-    },
-
-    processTrade: (userA_id, pokeID_A, userB_id, pokeID_B) => {
+    processTrade: (userA_id, cardId_A, userB_id, cardId_B) => {
         const tradeTransaction = db.transaction(() => {
-            const cardA = db.prepare('SELECT uuid, name, is_shiny, pokemon_id, types FROM cards WHERE pokemon_id = ? AND user_id = ? LIMIT 1').get(pokeID_A, userA_id);
-            if (!cardA) throw new Error(`El usuario <@${userA_id}> ya no tiene la carta #${pokeID_A}.`);
+            const cardA = db.prepare('SELECT uuid, name FROM cards WHERE card_id = ? AND user_id = ? LIMIT 1').get(cardId_A, userA_id);
+            if (!cardA) throw new Error(`El usuario <@${userA_id}> ya no tiene la carta ${cardId_A}.`);
 
-            const cardB = db.prepare('SELECT uuid, name, is_shiny, pokemon_id, types FROM cards WHERE pokemon_id = ? AND user_id = ? LIMIT 1').get(pokeID_B, userB_id);
-            if (!cardB) throw new Error(`El usuario <@${userB_id}> ya no tiene la carta #${pokeID_B}.`);
+            const cardB = db.prepare('SELECT uuid, name FROM cards WHERE card_id = ? AND user_id = ? LIMIT 1').get(cardId_B, userB_id);
+            if (!cardB) throw new Error(`El usuario <@${userB_id}> ya no tiene la carta ${cardId_B}.`);
 
             db.prepare('UPDATE cards SET user_id = ? WHERE uuid = ?').run(userB_id, cardA.uuid);
             db.prepare('UPDATE cards SET user_id = ? WHERE uuid = ?').run(userA_id, cardB.uuid);
-            return { success: true, cardA: cardA, cardB: cardB };
+            
+            return { 
+                success: true, 
+                cardA: { name: cardA.name, id: cardId_A }, 
+                cardB: { name: cardB.name, id: cardId_B }
+            };
         });
-        try { return tradeTransaction(); } catch (err) { return { success: false, message: err.message }; }
+
+        try { 
+            return tradeTransaction(); 
+        } catch (err) { 
+            return { success: false, message: err.message }; 
+        }
     },
 
-    // --- SISTEMA DE RANKING ---
+    // =================================================
+    // 🏆 RANKINGS (LEADERBOARD)
+    // =================================================
+
     getLeaderboard: (type) => {
         if (type === 'money') {
             return db.prepare('SELECT id, balance FROM users ORDER BY balance DESC LIMIT 10').all();
         } else if (type === 'cards') {
             return db.prepare('SELECT user_id as id, COUNT(*) as count FROM cards GROUP BY user_id ORDER BY count DESC LIMIT 10').all();
         } else if (type === 'shinys') {
-            return db.prepare('SELECT user_id as id, COUNT(*) as count FROM cards WHERE is_shiny = 1 GROUP BY user_id ORDER BY count DESC LIMIT 10').all();
+            return db.prepare(`
+                SELECT user_id as id, COUNT(*) as count 
+                FROM cards 
+                WHERE rarity LIKE '%Rare%' OR rarity LIKE '%Secret%' 
+                GROUP BY user_id 
+                ORDER BY count DESC LIMIT 10
+            `).all();
         }
         return [];
-    },
-
-
-    getCardByUUID: (userId, cardUuid) => {
-        const card = db.prepare('SELECT * FROM cards WHERE LOWER(uuid) = LOWER(?) AND user_id = ?').get(cardUuid, userId);
-        return card; 
-    },
+    }
 };
