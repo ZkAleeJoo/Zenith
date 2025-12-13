@@ -5,15 +5,17 @@ const { EMOJIS, CONFIG, TYPE_COLORS } = require('../../utils/constants');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('daily')
-        .setDescription('¡Recibe tu suministro diario de Pokémonedas!'),
+        .setDescription('Recoge tus Pokémonedas diarias.'),
 
     async execute(interaction) {
         const user = interaction.user;
         const userData = getUserData(user.id);
-        const isPremium = userData.isPremium;
-
-        const COOLDOWN = CONFIG.DAILY_COOLDOWN; 
         
+        const COOLDOWN = CONFIG.DAILY_COOLDOWN || 5000;
+        const isPremium = userData.isPremium;
+        let REWARD = CONFIG.DAILY_REWARD || 200;
+        if (isPremium) REWARD = REWARD * 2;
+
         const timeSinceLast = Date.now() - userData.lastDaily;
 
         if (timeSinceLast < COOLDOWN) {
@@ -22,46 +24,39 @@ module.exports = {
             const minutes = Math.floor((remainingTime % 3600000) / 60000);
             
             return interaction.reply({ 
-                content: `⏳ **¡Ya reclamaste hoy!** \`|\` Vuelve en **${hours}h ${minutes}m** para más suministros.`, 
+                content: `${EMOJIS.calendar || '📅'} \`|\` Vuelve en **${hours}h ${minutes}m** para reclamar más monedas.`, 
                 flags: 64 
             });
         }
 
-        let baseReward = 500; 
-        const luckBonus = Math.floor(Math.random() * 301);
-        
-        let totalReward = baseReward + luckBonus;
-        
-        if (isPremium) totalReward *= 2;
-
-        addCoins(user.id, totalReward);
+        addCoins(user.id, REWARD);
         setDaily(user.id);
 
-        const newBalance = userData.balance + totalReward;
+        const newBalance = userData.balance + REWARD;
 
         const embed = new EmbedBuilder()
-            .setColor(TYPE_COLORS.market_buy || 0xF1C40F)
-            .setTitle(`${EMOJIS.money} SUMINISTRO DIARIO RECIBIDO`)
-            .setDescription(`¡Hola **${user.username}**! Has retirado fondos del Banco Pokémon.`)
+            .setColor(TYPE_COLORS.shiny || 0xFFD700)
+            .setTitle(`${EMOJIS.check || '✅'} ¡Asistencia Diaria Confirmada!`)
+            .setDescription(`¡Hola <@${user.id}>! Gracias por jugar hoy.\nAquí tienes fondos para tus próximos sobres.`)
             .addFields(
                 { 
-                    name: 'Ingresos', 
-                    value: `**+${totalReward}** ${EMOJIS.money}`, 
+                    name: '**Has ganado:**', 
+                    value: `+${REWARD} ${EMOJIS.money}`, 
                     inline: true 
                 },
                 { 
-                    name: 'Nuevo Balance', 
-                    value: `**${newBalance}** ${EMOJIS.money}`, 
+                    name: `${EMOJIS.bank || '🏦'} Nuevo Balance`, 
+                    value: `${newBalance} ${EMOJIS.money}`, 
                     inline: true 
                 },
                 {
-                    name: 'Desglose',
-                    value: `Base: ${baseReward} | Suerte: +${luckBonus}${isPremium ? ' | **👑 Bonus VIP x2**' : ''}`,
+                    name: `${EMOJIS.rare_legend || '💡'} Tip`,
+                    value: 'Usa `/open` para gastar tus monedas en sobres.',
                     inline: false
                 }
             )
-            .setThumbnail('https://cdn-icons-png.flaticon.com/512/2933/2933116.png')
-            .setFooter({ text: '¡Úsalos sabiamente en /open!', iconURL: user.displayAvatarURL() })
+            .setThumbnail('https://i.pinimg.com/originals/fe/04/b9/fe04b9b175c91e97df91eaa199d2d3dd.gif') 
+            .setFooter({ text: 'Zenith TCG • Economía Global', iconURL: user.displayAvatarURL() })
             .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
