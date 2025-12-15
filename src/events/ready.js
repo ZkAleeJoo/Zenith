@@ -8,8 +8,6 @@ module.exports = {
 
         const activities = [
             { name: '💎 /help - zenith.com', type: ActivityType.Playing },
-            { name: 'Abre cartas con /open', type: ActivityType.Playing },
-            { name: 'Jugando a Cobblemon', type: ActivityType.Playing }
         ];
 
         let i = 0;
