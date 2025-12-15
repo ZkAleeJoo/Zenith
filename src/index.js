@@ -56,7 +56,7 @@ app.get('/api/stats', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`📡 API del Bot escuchando en http://localhost:${PORT}`);
+    console.log(`📡 API del Bot escuchando en http://mi4.tect.host:${PORT}`);
 });
 
 client.login(process.env.TOKEN);
