@@ -11,9 +11,9 @@ module.exports = {
         const user = interaction.user;
         const userData = getUserData(user.id);
         
-        const COOLDOWN = CONFIG.DAILY_COOLDOWN || 5000;
+        const COOLDOWN = CONFIG.DAILY_COOLDOWN;
         const isPremium = userData.isPremium;
-        let REWARD = CONFIG.DAILY_REWARD || 200;
+        let REWARD = CONFIG.DAILY_REWARD;
         if (isPremium) REWARD = REWARD * 2;
 
         const timeSinceLast = Date.now() - userData.lastDaily;
