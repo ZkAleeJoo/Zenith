@@ -25,7 +25,7 @@ module.exports = {
 
     async execute(interaction) {
         const subcommand = interaction.options.getSubcommand();
-
+        
         if (subcommand === 'sell') {
             const pokeId = interaction.options.getInteger('pokemon_id');
             const price = interaction.options.getInteger('precio');
