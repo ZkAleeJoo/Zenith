@@ -73,6 +73,11 @@ const initDB = () => {
         )
     `).run();
 
+    db.prepare(`
+        INSERT OR IGNORE INTO users (id, balance) 
+        VALUES ('MARKET_SYSTEM', 0)
+    `).run();
+    
     console.log('✅ Base de datos SQLite conectada y tablas sincronizadas.');
 };
 
