@@ -25,7 +25,6 @@ const rest = new REST().setToken(process.env.TOKEN);
 
 (async () => {
 	try {
-		console.log(`🚀 Iniciando actualización de ${commands.length} comandos (Modo Global / Producción).`);
 
 		const data = await rest.put(
 			Routes.applicationCommands(process.env.CLIENT_ID, process.env.GUILD_ID), //process.env.GUILD_ID
@@ -33,7 +32,6 @@ const rest = new REST().setToken(process.env.TOKEN);
 		);
 
 		console.log(`✅ ¡Éxito! Se han registrado ${data.length} comandos GLOBALMENTE.`);
-		console.log('⚠️ NOTA: Los comandos globales pueden tardar hasta 1 hora en propagarse a todos los servidores debido a la caché de Discord.');
 	} catch (error) {
 		console.error('❌ Error fatal durante el despliegue:', error);
 	}
