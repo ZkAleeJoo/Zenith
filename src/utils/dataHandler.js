@@ -244,15 +244,15 @@ module.exports = {
 
     // --- SISTEMA DE RANKING ---
     getLeaderboard: (type) => {
-        if (type === 'money') {
-            return db.prepare('SELECT id, balance FROM users ORDER BY balance DESC LIMIT 10').all();
-        } else if (type === 'cards') {
-            return db.prepare('SELECT user_id as id, COUNT(*) as count FROM cards GROUP BY user_id ORDER BY count DESC LIMIT 10').all();
-        } else if (type === 'shinys') {
-            return db.prepare('SELECT user_id as id, COUNT(*) as count FROM cards WHERE is_shiny = 1 GROUP BY user_id ORDER BY count DESC LIMIT 10').all();
-        }
-        return [];
-    },
+    if (type === 'money') {
+        return db.prepare('SELECT id, balance FROM users WHERE id != "MARKET_SYSTEM" ORDER BY balance DESC LIMIT 10').all();
+    } else if (type === 'cards') {
+        return db.prepare('SELECT user_id as id, COUNT(*) as count FROM cards WHERE user_id != "MARKET_SYSTEM" GROUP BY user_id ORDER BY count DESC LIMIT 10').all();
+    } else if (type === 'shinys') {
+        return db.prepare('SELECT user_id as id, COUNT(*) as count FROM cards WHERE is_shiny = 1 AND user_id != "MARKET_SYSTEM" GROUP BY user_id ORDER BY count DESC LIMIT 10').all();
+    }
+    return [];
+},
 
 
     getCardByUUID: (userId, cardUuid) => {
