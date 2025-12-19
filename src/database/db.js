@@ -17,7 +17,8 @@ const initDB = () => {
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             balance INTEGER DEFAULT 500,
-            last_daily INTEGER DEFAULT 0
+            last_daily INTEGER DEFAULT 0,
+            last_work INTEGER DEFAULT 0
         )
     `).run();
 
@@ -42,6 +43,15 @@ const initDB = () => {
             db.prepare('ALTER TABLE users ADD COLUMN premium_expires INTEGER DEFAULT 0').run();
             console.log('✅ Columnas Premium agregadas con éxito.');
         }
+
+        const hasWork = tableInfo.some(col => col.name === 'last_work');
+        if (!hasWork) {
+            console.log('🔄 Agregando columna last_work para el comando /work...');
+            db.prepare('ALTER TABLE users ADD COLUMN last_work INTEGER DEFAULT 0').run();
+            console.log('✅ Columna last_work agregada con éxito.');
+        }
+
+
     } catch (error) {
         console.error("Error en migración:", error);
     }
