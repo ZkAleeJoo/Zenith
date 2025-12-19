@@ -27,6 +27,7 @@ module.exports = {
             userId: user.id,
             balance: user.balance,
             lastDaily: user.last_daily,
+            lastWork: user.last_work || 0,
             isPremium: Boolean(user.is_premium), 
             premiumExpires: user.premium_expires,
             cards: cardsRaw.map(formatCard)
@@ -259,4 +260,9 @@ module.exports = {
         const card = db.prepare('SELECT * FROM cards WHERE LOWER(uuid) = LOWER(?) AND user_id = ?').get(cardUuid, userId);
         return card; 
     },
+
+    setWork: (userId) => {
+    module.exports.getUserData(userId); 
+    db.prepare('UPDATE users SET last_work = ? WHERE id = ?').run(Date.now(), userId);
+},
 };
