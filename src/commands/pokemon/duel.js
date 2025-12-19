@@ -395,7 +395,7 @@ async function runBattle(interaction, f1, f2) {
     const resultAttachment = new AttachmentBuilder(resultBuffer, { name: 'battle-result.png' });
 
     const embed = new EmbedBuilder()
-        .setTitle(`🏆 ¡VICTORIA PARA ${winner.user.username.toUpperCase()}!`)
+        .setTitle(`${EMOJIS.trophy} ¡VICTORIA PARA ${winner.user.username.toUpperCase()}!`)
         .setDescription(`**${winner.stats.name}** se alza con la victoria tras **${turn-1} rondas** de combate.\n\n` + 
                         `> \`|\` **Ganador:** ${winner.user} (+${prize} ${EMOJIS.money})\n` +
                         `> \`|\` **Perdedor:** ${loser.user}`)

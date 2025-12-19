@@ -23,7 +23,7 @@ module.exports = {
         const data = getLeaderboard(category);
 
         if (data.length === 0) {
-            return interaction.editReply({ content: '🚫 Aún no hay datos suficientes para generar un ranking' });
+            return interaction.editReply({ content: `${EMOJIS.error} Aún no hay datos suficientes para generar un ranking` });
         }
 
         let title = '';

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { CONFIG, TYPE_COLORS } = require('../../utils/constants');
+const { EMOJIS, CONFIG, TYPE_COLORS } = require('../../utils/constants');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -23,7 +23,7 @@ module.exports = {
         const plan = interaction.options.getString('plan');
         
         if (!attachment.contentType.startsWith('image/')) {
-            return interaction.reply({ content: '❌ Por favor sube una imagen válida.', flags: 64 });
+            return interaction.reply({ content: `${EMOJIS.error} Por favor sube una imagen válida`, flags: 64 });
         }
 
         try {
@@ -31,9 +31,9 @@ module.exports = {
                 > Hemos recibido tu comprobante para el plan **${plan}**.\n
                 > Un administrador lo revisará pronto. Si es aprobado, recibirás un código por aquí.`);
 
-            await interaction.reply({ content: '✅ **Comprobante enviado.** Revisa tus Mensajes Directos (DM), el bot te mantendrá informado.', flags: 64 });
+            await interaction.reply({ content: `${EMOJIS.check} **Comprobante enviado.** Revisa tus Mensajes Directos (DM), el bot te mantendrá informado`, flags: 64 });
         } catch (e) {
-            return interaction.reply({ content: '❌ No pude enviarte DM. Por favor abre tus mensajes privados para recibir el código.', flags: 64 });
+            return interaction.reply({ content: `${EMOJIS.error} No pude enviarte DM. Por favor abre tus mensajes privados para recibir el código.`, flags: 64 });
         }
 
         const adminChannel = interaction.client.channels.cache.get(CONFIG.ADMIN_LOGS_CHANNEL);
@@ -54,11 +54,11 @@ module.exports = {
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId(`approve_pay_${days}_${interaction.user.id}`)
-                .setLabel('✅ Aprobar y Enviar Código')
+                .setLabel(`${EMOJIS.check} Aprobar y Enviar Código`)
                 .setStyle(ButtonStyle.Success),
             new ButtonBuilder()
                 .setCustomId(`reject_pay_${interaction.user.id}`)
-                .setLabel('⛔ Rechazar')
+                .setLabel(`${EMOJIS.error} Rechazar`)
                 .setStyle(ButtonStyle.Danger)
         );
 

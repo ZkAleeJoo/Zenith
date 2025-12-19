@@ -16,7 +16,7 @@ module.exports = {
         const userA = interaction.user;
         const userB = interaction.options.getUser('usuario');
 
-        if (userB.id === userA.id) return interaction.reply({ content: '🚫 Error de conexión: Destino inválido.', flags: 64 });
+        if (userB.id === userA.id) return interaction.reply({ content: `${EMOJIS.error} Error de conexión: Destino inválido.`, flags: 64 });
         if (userB.bot) return interaction.reply({ content: '🤖 Los sistemas automatizados no comercian.', flags: 64 });
 
         let tradeState = {
@@ -152,7 +152,7 @@ module.exports = {
                             const card = userData.cards.find(c => c.id == inputId);
 
                             if (!card) {
-                                await modalSubmit.reply({ content: `🚫 Error: Ítem #${inputId} no encontrado en base de datos.`, flags: 64 });
+                                await modalSubmit.reply({ content: `${EMOJIS.error} Error: Ítem #${inputId} no encontrado en base de datos.`, flags: 64 });
                                 return;
                             }
 
@@ -184,14 +184,14 @@ module.exports = {
                                 const attachment = new AttachmentBuilder(buffer, { name: 'trade-success.png' });
 
                                 const successEmbed = new EmbedBuilder()
-                                    .setTitle('✅ TRANSFERENCIA COMPLETADA')
+                                    .setTitle(`${EMOJIS.check} TRANSFERENCIA COMPLETADA`)
                                     .setColor(0x2ECC71)
                                     .setImage('attachment://trade-success.png') 
                                     .setFooter({ text: 'Registro de transacción guardada.' });
                                 
                                 await btnInt.update({ embeds: [successEmbed], components: [], files: [attachment] });
                             } else {
-                                await btnInt.update({ content: `❌ Error Crítico: ${result.message}`, components: [] });
+                                await btnInt.update({ content: `${EMOJIS.error} Error Crítico: ${result.message}`, components: [] });
                             }
                         } else {
                             await btnInt.update(updateTradePanel());

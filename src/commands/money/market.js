@@ -30,7 +30,7 @@ module.exports = {
             const pokeId = interaction.options.getInteger('pokemon_id');
             const price = interaction.options.getInteger('precio');
 
-            if (price < 1) return interaction.reply({ content: '🚫 El precio debe ser mayor a 0.', flags: 64 });
+            if (price < 1) return interaction.reply({ content: `${EMOJIS.error} El precio debe ser mayor a 0.`, flags: 64 });
 
             const result = postToMarket(interaction.user.id, pokeId, price);
 
@@ -41,7 +41,9 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setColor(TYPE_COLORS.market_sell || 0x2ECC71) 
                 .setTitle(`${EMOJIS.market} Nueva Oferta Creada`)
-                .setDescription(`Has puesto a la venta tu **${result.cardName}**.\n\n${EMOJIS.tag} **Precio:** ${price} ${EMOJIS.money}\n🆔 **ID Mercado:** \`${result.marketId}\``)
+                .setDescription(`Has puesto a la venta tu **${result.cardName}**.\n
+                    \n${EMOJIS.tag} **Precio:** ${price} ${EMOJIS.money}
+                    \n🆔 **ID Mercado:** \`${result.marketId}\``)
                 .setFooter({ text: 'Otros jugadores pueden comprarla usando este ID.' });
 
             return interaction.reply({ embeds: [embed] });
@@ -58,7 +60,7 @@ module.exports = {
 
             const embed = new EmbedBuilder()
                 .setColor(TYPE_COLORS.market_buy || 0xF1C40F) 
-                .setTitle(`🎉 ¡Compra Exitosa!`)
+                .setTitle(`${EMOJIS.compra_exitosa} ¡Compra Exitosa!`)
                 .setDescription(`Has comprado **${result.card.name}** por **${result.price}** ${EMOJIS.money}.\n¡Ya está en tu colección!`)
                 .setThumbnail('https://cdn-icons-png.flaticon.com/512/10609/10609398.png');
 
@@ -77,7 +79,8 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setColor(TYPE_COLORS.market_remove || 0xE74C3C) 
                 .setTitle(`${EMOJIS.tag} Venta Cancelada`)
-                .setDescription(`Has retirado tu **${result.cardName}** del mercado.\n\n✅ La carta ha vuelto a tu inventario`)
+                .setDescription(`Has retirado tu **${result.cardName}** del mercado.\n
+                    \n${EMOJIS.check} La carta ha vuelto a tu inventario`)
                 .setFooter({ text: 'Zenith Market System' });
 
             return interaction.reply({ embeds: [embed] });
@@ -105,12 +108,14 @@ module.exports = {
                     
                     const sellerText = l.sellerId === interaction.user.id ? '**¡TU VENTA!**' : `Vendedor: <@${l.sellerId}>`;
 
-                    return `🆔 \`${l.marketId}\` | **${l.card.name}** ${shiny}${legend}\n└ 💰 **${l.price}** - ${sellerText}`;
+                    return `🆔 \`${l.marketId}\` | **${l.card.name}** ${shiny}${legend}\n└ ${EMOJIS.money} **${l.price}** - ${sellerText}`;
                 }).join('\n\n');
 
                 return new EmbedBuilder()
                     .setTitle(`${EMOJIS.market} Mercado Global`)
-                    .setDescription(`Usa \`/market buy [ID]\` para comprar.\nUsa \`/market remove [ID]\` para cancelar tus ventas.\n\n${desc}`)
+                    .setDescription(`Usa \`/market buy [ID]\` para comprar.
+                        \nUsa \`/market remove [ID]\` para cancelar tus ventas.
+                        \n\n${desc}`)
                     .setColor(0x3498DB)
                     .setFooter({ text: `Página ${page + 1} de ${totalPages} • ${listings.length} ofertas activas` });
             };

@@ -58,7 +58,7 @@ module.exports = {
 
         } catch (error) {
             console.error(error);
-            await interaction.editReply({ content: '❌ Hubo un error generando la imagen.' });
+            await interaction.editReply({ content: `${EMOJIS.error} Hubo un error generando la imagen.` });
         }
     },
 };

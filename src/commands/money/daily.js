@@ -24,7 +24,7 @@ module.exports = {
             const minutes = Math.floor((remainingTime % 3600000) / 60000);
             
             return interaction.reply({ 
-                content: `${EMOJIS.calendar || '📅'} \`|\` Vuelve en **${hours}h ${minutes}m** para reclamar más monedas.`, 
+                content: `${EMOJIS.calendar} \`|\` Vuelve en **${hours}h ${minutes}m** para reclamar más monedas.`, 
                 flags: 64 
             });
         }
@@ -36,7 +36,7 @@ module.exports = {
 
         const embed = new EmbedBuilder()
             .setColor(TYPE_COLORS.shiny || 0xFFD700)
-            .setTitle(`${EMOJIS.check || '✅'} ¡Asistencia Diaria Confirmada!`)
+            .setTitle(`${EMOJIS.check} ¡Asistencia Diaria Confirmada!`)
             .setDescription(`¡Hola <@${user.id}>! Gracias por jugar hoy.\nAquí tienes fondos para tus próximos sobres.`)
             .addFields(
                 { 
@@ -45,12 +45,12 @@ module.exports = {
                     inline: true 
                 },
                 { 
-                    name: `${EMOJIS.bank || '🏦'} Nuevo Balance`, 
+                    name: `${EMOJIS.bank} Nuevo Balance`, 
                     value: `${newBalance} ${EMOJIS.money}`, 
                     inline: true 
                 },
                 {
-                    name: `${EMOJIS.rare_legend || '💡'} Tip`,
+                    name: `${EMOJIS.rare_legend} Tip`,
                     value: 'Usa `/open` para gastar tus monedas en sobres.',
                     inline: false
                 }

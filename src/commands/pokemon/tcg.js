@@ -69,7 +69,7 @@ module.exports = {
 
         collector.on('collect', async i => {
             if (i.user.id !== interaction.user.id) {
-                return i.reply({ content: '🚫 ¡Este no es tu álbum!', flags: 64 });
+                return i.reply({ content: `${EMOJIS.error} ¡Este no es tu álbum!`, flags: 64 });
             }
 
             await i.deferUpdate();

@@ -39,7 +39,7 @@ module.exports = {
 
         } catch (error) {
             console.error("Error en profile:", error);
-            await interaction.editReply({ content: '❌ Hubo un error generando la tarjeta de entrenador.' });
+            await interaction.editReply({ content: `${EMOJIS.error} Hubo un error generando la tarjeta de entrenador.` });
         }
     },
 };

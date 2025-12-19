@@ -52,7 +52,7 @@ module.exports = {
             findEvolution(evoData.chain);
 
             if (!evolutionName) {
-                return interaction.editReply({ content: `🚫 **${baseCard.name}** no puede evolucionar más (o es una evolución especial no soportada).` });
+                return interaction.editReply({ content: `${EMOJIS.error} **${baseCard.name}** no puede evolucionar más (o es una evolución especial no soportada).` });
             }
 
             const newPokeRes = await fetch(`https://pokeapi.co/api/v2/pokemon/${evolutionName}`);
@@ -74,19 +74,20 @@ module.exports = {
             if (success) {
                 const embed = new EmbedBuilder()
                     .setTitle(`🧬 ¡Evolución Exitosa!`)
-                    .setDescription(`Has fusionado **3x ${baseCard.name}**... \n\n✨ **¡Se han convertido en ${finalName}!** ✨`)
+                    .setDescription(`Has fusionado **3x ${baseCard.name}**... 
+                        \n\n**¡Se han convertido en ${finalName}!**`)
                     .setColor(TYPE_COLORS[newPokeData.types[0].type.name] || TYPE_COLORS.base)
                     .setThumbnail(newPokeData.sprites.other['official-artwork'].front_default)
-                    .addFields({ name: 'Estado', value: isShiny ? '🌟 ¡Salió SHINY!' : 'Normal', inline: true });
+                    .addFields({ name: 'Estado', value: isShiny ? `${EMOJIS.shiny} ¡Salió SHINY!` : 'Normal', inline: true });
 
                 await interaction.editReply({ embeds: [embed] });
             } else {
-                await interaction.editReply({ content: '❌ Hubo un error en la base de datos al procesar la evolución.' });
+                await interaction.editReply({ content: `${EMOJIS.error} Hubo un error en la base de datos al procesar la evolución.` });
             }
 
         } catch (error) {
             console.error(error);
-            await interaction.editReply({ content: '❌ Error conectando con la PokéAPI para verificar la evolución.' });
+            await interaction.editReply({ content: `${EMOJIS.error} Error conectando con la PokéAPI para verificar la evolución.` });
         }
     },
 };

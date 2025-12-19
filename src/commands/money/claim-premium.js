@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { redeemPremiumCode } = require('../../utils/dataHandler');
+const { EMOJIS } = require('../../utils/constants');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -17,16 +18,16 @@ module.exports = {
 
         if (!days) {
             return interaction.reply({ 
-                content: '❌ **Código inválido o ya usado.** Verifica que lo escribiste bien.', 
+                content: `${EMOJIS.error} **Código inválido o ya usado.** Verifica que lo escribiste bien.`, 
                 flags: 64 
             });
         }
 
         const embed = new EmbedBuilder()
-            .setTitle('💎 ¡Zenith Prime Activado!')
-            .setDescription(`Has canjeado exitosamente **${days} días** de membresía.\n\n✨ Disfruta de tus beneficios VIP.`)
+            .setTitle(`${EMOJIS.premium} Suscripción premium activada`)
+            .setDescription(`Has canjeado exitosamente **${days} días** de membresía.\n
+                \n> **Disfruta de tus beneficios VIP**`)
             .setColor(0xFF00FF) 
-            .setImage('https://media1.tenor.com/m/f28w3bZ9iB0AAAAC/pokemon-card.gif') 
             .setFooter({ text: 'Gracias por apoyar el proyecto.' });
 
         await interaction.reply({ embeds: [embed] });

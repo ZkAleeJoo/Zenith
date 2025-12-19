@@ -111,10 +111,10 @@ module.exports = {
                 );
 
             let rarityText = 'Rareza: Común';
-            if (isLegendary) rarityText = 'Rareza: 👑 RARA';
-            if (isShiny) rarityText += ' | ✨ SHINY';
+            if (isLegendary) rarityText = `Rareza: ${EMOJIS.legendary} RARA`;
+            if (isShiny) rarityText += ` | ${EMOJIS.shiny} SHINY`;
 
-            const collectionStatus = isNew ? "✅ NUEVA (Guardada)" : "⚠️ REPETIDA (Descartada)";
+            const collectionStatus = isNew ? `${EMOJIS.check} NUEVA (Guardada)` : "⚠️ REPETIDA";
             
             let footerText = `Zenith TCG • ${rarityText} • ${collectionStatus}`;
             if (isPremium) footerText += " • 👑 Zenith Vip";

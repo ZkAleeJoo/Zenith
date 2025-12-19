@@ -12,24 +12,29 @@ module.exports = {
     ],
 
     EMOJIS: {
-        shiny: '<a:shiny:1442565071346860103>',
-        legend: '<a:Pokemon:1442692886809284659>',
-        rare_legend: '<:Mew_blush:1442564185312460800>', 
+        shiny: '<a:shiny:1451576560787263539>', //
+        legend: '<:legend:1451576585407824034>', //
+        rare_legend: '<:newblush:1451576639069880432>', //
         
-        card: '<a:cards:1442936896987725925>',
-        money: '<a:coins:1442573160393212099>', 
-        stats: '<:stats:1442552710141444216>',
-        market: '🏪',
-        tag: '🏷️',
-        rank: '<:rank:1442932832103305306>',
-        medal: '<a:medallas:1442934339049492582>',
+        card: '<:cards:1451576570199281837>', //
+        money: '<a:coins:1451576027536036065>', //
+        bank: '<:money:1451576578898264107>', //
+        check: '<:check:1451576582199181373>', //
+        stats: '<:stats:1451576642102366228>', //
+        calendar: '<:calendarieuwu:1451576576549322957>', //
+        market: '<a:shop:1451580110946828403>', //
+        tag: '<:tag:1451580127187042467>', //
+        rank: '<a:rank:1451576564142706863>', //
+        medal: '<a:medallas:1451576566608953501>', //
         
-        cool: '<:gengarin:1442573642868457502>',
-        classic: '<:gengarheheq:1442573628062302359>',
-        error: '<a:no:1442565248115806278>', 
+        cool: '<:gengarin:1451576635236024462>', //
+        classic: '<:gengarrin2:1451576637123465358>', //
+        error: '<:no:1451579130398375956>', //
         
-        ball: '<:Pokemonball:1442552446755930212>',
-        measure: '<:map80:1442552444453126184>'
+        ball: '<a:pokeball:1451576644224548987>', //
+        measure: '<:mapitauwu:1451576647244320881>', //
+        premium: '<a:premium:1451581322165223537>', //
+        compra_exitosa: '<a:compra_exitosa:1451582401087279326>' //
     },
 
     TYPE_COLORS: {
