@@ -8,6 +8,10 @@ module.exports = {
         .setDescription('Trabaja un poco para ganar algunas Pokémonedas.'),
 
     async execute(interaction) {
+
+        await interaction.deferReply();
+
+        try{
         const user = interaction.user;
         const userData = getUserData(user.id);
         
@@ -59,6 +63,11 @@ module.exports = {
             .setFooter({ text: 'Zenith TCG • Sistema de Empleo', iconURL: user.displayAvatarURL() })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+
+        }catch (error) {
+        console.error('Error en work:', error);
+        await interaction.editReply({ content: 'Hubo un error al procesar tu jornada laboral.' });
+    }
     },
 };
